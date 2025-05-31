@@ -1,8 +1,17 @@
 package models
 
+import "time"
+
 const (
 	Counter = "counter"
 	Gauge   = "gauge"
+)
+
+const (
+	PollInterval      = 2 * time.Second
+	ReportInterval    = 10 * time.Second
+	SendMetricTimeout = 5 * time.Second
+	ServerAddress     = "http://localhost:8080"
 )
 
 // NOTE: Не усложняем пример, вводя иерархическую вложенность структур.
