@@ -91,7 +91,7 @@ func sendMetric(client *http.Client, metricType string, metricName string, metri
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			fmt.Println("failed to close response body")
+			fmt.Println(err)
 		}
 	}(resp.Body)
 
