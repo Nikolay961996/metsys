@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
 	"net/http"
@@ -25,7 +24,6 @@ func UpdateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 
 		w.Header().Set("content-type", "text/plain; charset=utf-8")
 		metricName, metricType, counterValue, gaugeValue, err := parseMetricData(r.URL.Path, w)
-		fmt.Println(metricName, counterValue, gaugeValue, err)
 		if err != nil {
 			return
 		}
