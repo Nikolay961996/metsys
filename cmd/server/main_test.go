@@ -7,7 +7,6 @@ import (
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -43,12 +42,7 @@ func TestPositiveServer(t *testing.T) {
 			h := handlers.UpdateMetricHandler(s)
 			h(response, request)
 			result := response.Result()
-			defer func(Body io.ReadCloser) {
-				err := Body.Close()
-				if err != nil {
-					fmt.Println(err)
-				}
-			}(result.Body)
+			defer result.Body.Close()
 
 			params := strings.Split(tt.url, "/")
 			metricType := params[2]
@@ -100,12 +94,7 @@ func TestNegativeServer(t *testing.T) {
 			h := handlers.UpdateMetricHandler(nil)
 			h(response, request)
 			result := response.Result()
-			defer func(Body io.ReadCloser) {
-				err := Body.Close()
-				if err != nil {
-					fmt.Println(err)
-				}
-			}(result.Body)
+			defer result.Body.Close()
 
 			assert.Equal(t, tt.want.statusCode, result.StatusCode)
 		})

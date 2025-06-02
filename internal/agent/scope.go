@@ -3,7 +3,6 @@ package agent
 import (
 	"fmt"
 	"github.com/Nikolay961996/metsys/models"
-	"io"
 	"net/http"
 )
 
@@ -88,12 +87,7 @@ func sendMetric(client *http.Client, metricType string, metricName string, metri
 	if err != nil {
 		return fmt.Errorf("failed to send metric (%s) = %v", metricName, metricValue)
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			fmt.Println(err)
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode)
