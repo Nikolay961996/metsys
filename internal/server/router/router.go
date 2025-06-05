@@ -15,7 +15,9 @@ func MetricsRouter() *chi.Mux {
 
 func MetricsRouterWithStorage(s *storage.MemStorage) *chi.Mux {
 	r := chi.NewRouter()
-	r.Post("/update/{metricType}/{metricName}/{metricValue}", UpdateMetricHandler(s))
+
+	r.Get("/value/{metricType}/{metricName}", getMetricValueHandler(s))
+	r.Post("/update/{metricType}/{metricName}/{metricValue}", updateMetricHandler(s))
 
 	r.Post("/update/*", func(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")

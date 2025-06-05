@@ -5,11 +5,49 @@ import (
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/go-chi/chi/v5"
+	"io"
 	"net/http"
 	"strconv"
 )
 
-func UpdateMetricHandler(storage repositories.Storage) http.HandlerFunc {
+func getMetricValueHandler(storage repositories.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "text/plain; charset=utf-8")
+
+		metricType := chi.URLParam(r, "metricType")
+		metricName := chi.URLParam(r, "metricName")
+
+		var result string
+		switch metricType {
+		case models.Gauge:
+			v, err := storage.GetGauge(metricName)
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			result = strconv.FormatFloat(v, 'f', -1, 64)
+		case models.Counter:
+			v, err := storage.GetCounter(metricName)
+			if err != nil {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			result = strconv.FormatInt(v, 10)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		_, err := io.WriteString(w, result)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
