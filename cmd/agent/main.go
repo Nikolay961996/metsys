@@ -24,7 +24,7 @@ func run(pollTicker *time.Ticker, reportTicker *time.Ticker, metrics *agent.Metr
 			agent.Poll(metrics)
 			fmt.Println("Metrics poll")
 		case <-reportTicker.C:
-			err := agent.Report(metrics)
+			err := agent.Report(metrics, models.ServerAddress)
 			if err != nil {
 				fmt.Println("Error while reporting: ", err)
 			} else {

@@ -3,20 +3,20 @@ package agent
 import (
 	"fmt"
 	"github.com/Nikolay961996/metsys/models"
+	"github.com/go-resty/resty/v2"
 	"net/http"
 )
 
-func Report(metrics *Metrics) error {
-	client := &http.Client{
-		Timeout: models.SendMetricTimeout,
-	}
+func Report(metrics *Metrics, serverAddress string) error {
+	client := resty.New().
+		SetTimeout(models.SendMetricTimeout)
 
-	err := sendGaugeMetrics(client, metrics)
+	err := sendGaugeMetrics(client, serverAddress, metrics)
 	if err != nil {
 		return err
 	}
 
-	err = sendCounterMetrics(client, metrics)
+	err = sendCounterMetrics(client, serverAddress, metrics)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func Report(metrics *Metrics) error {
 	return nil
 }
 
-func sendGaugeMetrics(client *http.Client, metrics *Metrics) error {
+func sendGaugeMetrics(client *resty.Client, serverAddress string, metrics *Metrics) error {
 	gauge := map[string]float64{
 		"Alloc":         metrics.Alloc,
 		"BuckHashSys":   metrics.BuckHashSys,
@@ -57,7 +57,7 @@ func sendGaugeMetrics(client *http.Client, metrics *Metrics) error {
 	}
 
 	for k, v := range gauge {
-		err := sendMetric(client, models.Gauge, k, v)
+		err := sendMetric(client, serverAddress, models.Gauge, k, v)
 		if err != nil {
 			return err
 		}
@@ -66,13 +66,13 @@ func sendGaugeMetrics(client *http.Client, metrics *Metrics) error {
 	return nil
 }
 
-func sendCounterMetrics(client *http.Client, metrics *Metrics) error {
+func sendCounterMetrics(client *resty.Client, serverAddress string, metrics *Metrics) error {
 	counter := map[string]int64{
 		"PollCount": metrics.PollCount,
 	}
 
 	for k, v := range counter {
-		err := sendMetric(client, models.Counter, k, v)
+		err := sendMetric(client, serverAddress, models.Counter, k, v)
 		if err != nil {
 			return err
 		}
@@ -81,16 +81,22 @@ func sendCounterMetrics(client *http.Client, metrics *Metrics) error {
 	return nil
 }
 
-func sendMetric(client *http.Client, metricType string, metricName string, metricValue any) error {
-	url := fmt.Sprintf("%s/update/%s/%s/%v", models.ServerAddress, metricType, metricName, metricValue)
-	resp, err := client.Post(url, "text/plain", nil)
-	if err != nil {
-		return fmt.Errorf("failed to send metric (%s) = %v", metricName, metricValue)
-	}
-	defer resp.Body.Close()
+func sendMetric(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
+	url := fmt.Sprintf("%s/update/{metricType}/{metricName}/{metricValue}", serverAddress)
+	resp, err := client.R().
+		SetHeader("Content-Type", "text/plain").
+		SetPathParams(map[string]string{
+			"metricType":  metricType,
+			"metricName":  metricName,
+			"metricValue": fmt.Sprintf("%v", metricValue),
+		}).Post(url)
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode)
+	if err != nil {
+		return fmt.Errorf("failed to send metric (%s) = %v. %s", metricName, metricValue, err.Error())
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode())
 	}
 	return nil
 }

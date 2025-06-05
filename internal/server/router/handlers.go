@@ -1,15 +1,14 @@
-package handlers
+package router
 
 import (
 	"errors"
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
-// UpdateMetricHandler http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 func UpdateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -22,33 +21,25 @@ func UpdateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("content-type", "text/plain; charset=utf-8")
-		metricName, metricType, counterValue, gaugeValue, err := parseMetricData(r.URL.Path, w)
+		metricName, metricType, counterValue, gaugeValue, err := parseMetricData(r, w)
 		if err != nil {
 			return
 		}
-
 		if metricType == models.Gauge {
 			storage.SetGauge(metricName, gaugeValue)
 		} else if metricType == models.Counter {
 			storage.AddCounter(metricName, counterValue)
 		}
 
+		w.Header().Set("content-type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func parseMetricData(url string, w http.ResponseWriter) (string, string, int64, float64, error) {
-	path := strings.TrimPrefix(url, "/update/")
-	parts := strings.Split(path, "/")
-	if len(parts) != 3 {
-		http.Error(w, "Invalid format", http.StatusNotFound)
-		return "", "", 0, 0, errors.New("invalid format")
-	}
-
-	metricType := parts[0]
-	metricName := parts[1]
-	metricValueStr := parts[2]
+func parseMetricData(r *http.Request, w http.ResponseWriter) (string, string, int64, float64, error) {
+	metricType := chi.URLParam(r, "metricType")
+	metricName := chi.URLParam(r, "metricName")
+	metricValueStr := chi.URLParam(r, "metricValue")
 
 	if len(metricName) == 0 {
 		http.Error(w, "Metric name is empty", http.StatusNotFound)
