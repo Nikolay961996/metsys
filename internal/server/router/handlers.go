@@ -43,7 +43,6 @@ func getMetricValueHandler(storage repositories.Storage) http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
 	}
 }
 

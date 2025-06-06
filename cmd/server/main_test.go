@@ -7,6 +7,7 @@ import (
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -138,6 +139,51 @@ func TestServer(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestGetMetric(t *testing.T) {
+	type want struct {
+		statusCode int
+		value      string
+	}
+	tests := []struct {
+		name   string
+		method string
+		url    string
+		want   want
+	}{
+		{"test #1", http.MethodPost, "/update/gauge/memory/12.34", want{http.StatusOK, ""}},
+		{"test #2", http.MethodGet, "/value/gauge/memory", want{http.StatusOK, "12.34"}},
+		{"test #3", http.MethodGet, "/value/gauge/memory2", want{http.StatusNotFound, ""}},
+		{"test #4", http.MethodPost, "/update/gauge/memory/99.7654", want{http.StatusOK, ""}},
+		{"test #5", http.MethodGet, "/value/gauge/memory", want{http.StatusOK, "99.7654"}},
+		{"test #6", http.MethodGet, "/value/counter/cp", want{http.StatusNotFound, ""}},
+		{"test #7", http.MethodPost, "/update/counter/cp/123", want{http.StatusOK, ""}},
+		{"test #8", http.MethodGet, "/value/counter/cp", want{http.StatusOK, "123"}},
+		{"test #9", http.MethodPost, "/update/counter/cp/100", want{http.StatusOK, ""}},
+		{"test #10", http.MethodGet, "/value/counter/cp", want{http.StatusOK, "223"}},
+	}
+
+	ts := httptest.NewServer(router.MetricsRouter())
+	defer ts.Close()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request, err := http.NewRequest(tt.method, ts.URL+tt.url, nil)
+			require.NoError(t, err)
+
+			request.Header.Set("Content-Type", "text/plain")
+			resp, err := ts.Client().Do(request)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+			if tt.method == http.MethodGet && resp.StatusCode == http.StatusOK {
+				r, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Equal(t, tt.want.value, string(r))
+			}
 		})
 	}
 }
