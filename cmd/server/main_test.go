@@ -43,8 +43,8 @@ func TestPositiveServer(t *testing.T) {
 			request.Header.Set("Content-Type", "text/plain")
 
 			resp, err := ts.Client().Do(request)
-			defer resp.Body.Close()
 			require.NoError(t, err)
+			defer resp.Body.Close()
 
 			params := strings.Split(tt.url, "/")
 			metricType := params[2]
