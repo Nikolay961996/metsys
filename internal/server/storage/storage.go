@@ -1,6 +1,16 @@
 package storage
 
-import "errors"
+import (
+	"errors"
+	"github.com/Nikolay961996/metsys/models"
+	"strconv"
+)
+
+type MetricDto struct {
+	Name  string
+	Type  string
+	Value string
+}
 
 type MemStorage struct {
 	GaugeMetrics   map[string]float64
@@ -36,4 +46,23 @@ func (m *MemStorage) GetCounter(metricName string) (int64, error) {
 		return 0, errors.New("not Found")
 	}
 	return value, nil
+}
+
+func (m *MemStorage) GetAll() []MetricDto {
+	var r []MetricDto
+	for k, v := range m.GaugeMetrics {
+		r = append(r, MetricDto{
+			Name:  k,
+			Type:  models.Gauge,
+			Value: strconv.FormatFloat(v, 'f', -1, 64),
+		})
+	}
+	for k, v := range m.CounterMetrics {
+		r = append(r, MetricDto{
+			Name:  k,
+			Type:  models.Counter,
+			Value: strconv.FormatInt(v, 10),
+		})
+	}
+	return r
 }
