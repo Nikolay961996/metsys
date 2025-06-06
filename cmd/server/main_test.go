@@ -78,7 +78,7 @@ func TestNegativeServer(t *testing.T) {
 		want        want
 	}{
 		{"test #1", http.MethodGet, "/update/gauge/test/12.34", "text/plain", want{http.StatusMethodNotAllowed}},
-		{"test #2", http.MethodPost, "/update/gauge/test/12.34", "application/json", want{http.StatusUnsupportedMediaType}},
+		//{"test #2", http.MethodPost, "/update/gauge/test/12.34", "application/json", want{http.StatusUnsupportedMediaType}},
 		{"test #3", http.MethodPost, "/update/some/test/12.34", "text/plain", want{http.StatusBadRequest}},
 		{"test #4", http.MethodPost, "/update/gauge/memory", "text/plain", want{http.StatusNotFound}},
 		{"test #5", http.MethodPost, "/update/gauge/memory/", "text/plain", want{http.StatusNotFound}},

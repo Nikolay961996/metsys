@@ -74,10 +74,12 @@ func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 			return
 		}
 
-		if r.Header.Get("Content-Type") != "text/plain" {
-			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
-			return
-		}
+		/*
+			if r.Header.Get("Content-Type") != "text/plain" {
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+				return
+			}
+		*/
 
 		metricName, metricType, counterValue, gaugeValue, err := parseMetricData(r, w)
 		if err != nil {
