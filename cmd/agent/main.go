@@ -10,6 +10,7 @@ import (
 
 func main() {
 	flags()
+	fmt.Println("Send to", models.ServerAddress)
 	pollTicker := time.NewTicker(models.PollInterval)
 	reportTicker := time.NewTicker(models.ReportInterval)
 	defer pollTicker.Stop()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/models"
 	"net/http"
@@ -9,7 +10,8 @@ import (
 
 func main() {
 	flags()
-	err := http.ListenAndServe(":8080", router.MetricsRouter())
+	fmt.Println("Run on", models.ServerAddress)
+	err := http.ListenAndServe(models.ServerAddress, router.MetricsRouter())
 	if err != nil {
 		panic(err)
 	}
