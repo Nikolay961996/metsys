@@ -10,14 +10,14 @@ import (
 
 func main() {
 	flags()
-	fmt.Println("Run on", models.ServerAddress)
-	err := http.ListenAndServe(models.ServerAddress, router.MetricsRouter())
+	fmt.Println("Run on", models.RunOnServerAddress)
+	err := http.ListenAndServe(models.RunOnServerAddress, router.MetricsRouter())
 	if err != nil {
 		panic(err)
 	}
 }
 
 func flags() {
-	flag.StringVar(&models.ServerAddress, "a", models.ServerAddress, "server address ip:port")
+	flag.StringVar(&models.RunOnServerAddress, "a", "localhost:8080", "server address ip:port")
 	flag.Parse()
 }

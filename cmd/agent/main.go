@@ -10,7 +10,7 @@ import (
 
 func main() {
 	flags()
-	fmt.Println("Send to", models.ServerAddress)
+	fmt.Println("Send to", models.SendToServerAddress)
 	pollTicker := time.NewTicker(models.PollInterval)
 	reportTicker := time.NewTicker(models.ReportInterval)
 	defer pollTicker.Stop()
@@ -27,7 +27,7 @@ func run(pollTicker *time.Ticker, reportTicker *time.Ticker, metrics *agent.Metr
 			agent.Poll(metrics)
 			fmt.Println("Metrics poll")
 		case <-reportTicker.C:
-			err := agent.Report(metrics, models.ServerAddress)
+			err := agent.Report(metrics, models.SendToServerAddress)
 			if err != nil {
 				fmt.Println("Error while reporting: ", err)
 			} else {
@@ -39,7 +39,7 @@ func run(pollTicker *time.Ticker, reportTicker *time.Ticker, metrics *agent.Metr
 }
 
 func flags() {
-	flag.StringVar(&models.ServerAddress, "a", models.ServerAddress, "Metsys server address ip:port")
+	flag.StringVar(&models.SendToServerAddress, "a", "localhost:8080", "Metsys server address ip:port")
 	r := flag.Int("r", 10, "ReportInterval in seconds")
 	p := flag.Int("p", 2, "PollInterval in seconds")
 	flag.Parse()

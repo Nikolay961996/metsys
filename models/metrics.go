@@ -8,9 +8,10 @@ const (
 )
 
 var (
-	ServerAddress  = "http://localhost:8080"
-	PollInterval   = 2 * time.Second
-	ReportInterval = 10 * time.Second
+	RunOnServerAddress  = "http://localhost:8080"
+	SendToServerAddress = "http://localhost:8080"
+	PollInterval        = 2 * time.Second
+	ReportInterval      = 10 * time.Second
 )
 
 const (
