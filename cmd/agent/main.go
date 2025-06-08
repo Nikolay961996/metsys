@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/Nikolay961996/metsys/internal/agent"
 	"github.com/Nikolay961996/metsys/models"
@@ -8,6 +9,7 @@ import (
 )
 
 func main() {
+	flags()
 	pollTicker := time.NewTicker(models.PollInterval)
 	reportTicker := time.NewTicker(models.ReportInterval)
 	defer pollTicker.Stop()
@@ -33,4 +35,14 @@ func run(pollTicker *time.Ticker, reportTicker *time.Ticker, metrics *agent.Metr
 			}
 		}
 	}
+}
+
+func flags() {
+	flag.StringVar(&models.ServerAddress, "a", models.ServerAddress, "Metsys server address ip:port")
+	r := flag.Int("r", 10, "ReportInterval in seconds")
+	p := flag.Int("p", 2, "PollInterval in seconds")
+	flag.Parse()
+
+	models.ReportInterval = time.Duration(*r) * time.Second
+	models.PollInterval = time.Duration(*p) * time.Second
 }
