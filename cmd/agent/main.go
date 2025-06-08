@@ -39,7 +39,7 @@ func run(pollTicker *time.Ticker, reportTicker *time.Ticker, metrics *agent.Metr
 }
 
 func flags() {
-	flag.StringVar(&models.SendToServerAddress, "a", ":8080", "Metsys server address ip:port")
+	flag.StringVar(&models.SendToServerAddress, "a", "http://localhost:8080", "Metsys server address ip:port")
 	r := flag.Int("r", 10, "ReportInterval in seconds")
 	p := flag.Int("p", 2, "PollInterval in seconds")
 	flag.Parse()
