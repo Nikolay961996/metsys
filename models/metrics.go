@@ -7,11 +7,14 @@ const (
 	Gauge   = "gauge"
 )
 
+var (
+	ServerAddress = "http://localhost:8080"
+)
+
 const (
 	PollInterval      = 2 * time.Second
 	ReportInterval    = 10 * time.Second
 	SendMetricTimeout = 5 * time.Second
-	ServerAddress     = "http://localhost:8080"
 )
 
 // NOTE: Не усложняем пример, вводя иерархическую вложенность структур.
