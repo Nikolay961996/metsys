@@ -18,6 +18,6 @@ func main() {
 }
 
 func flags() {
-	flag.StringVar(&models.RunOnServerAddress, "a", "localhost:8080", "server address ip:port")
+	flag.StringVar(&models.RunOnServerAddress, "a", ":8080", "server address ip:port")
 	flag.Parse()
 }
