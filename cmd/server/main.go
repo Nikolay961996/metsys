@@ -6,6 +6,7 @@ import (
 	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/models"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -20,4 +21,9 @@ func main() {
 func flags() {
 	flag.StringVar(&models.RunOnServerAddress, "a", "localhost:8080", "server address ip:port")
 	flag.Parse()
+
+	if flag.NArg() > 0 {
+		fmt.Printf("Unknown flags: %v\n", flag.Args())
+		os.Exit(1)
+	}
 }

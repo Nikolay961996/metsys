@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Nikolay961996/metsys/internal/agent"
 	"github.com/Nikolay961996/metsys/models"
+	"os"
 	"strings"
 	"time"
 )
@@ -44,6 +45,11 @@ func flags() {
 	r := flag.Int("r", 10, "ReportInterval in seconds")
 	p := flag.Int("p", 2, "PollInterval in seconds")
 	flag.Parse()
+
+	if flag.NArg() > 0 {
+		fmt.Printf("Unknown flags: %v\n", flag.Args())
+		os.Exit(1)
+	}
 
 	if !strings.HasPrefix(models.SendToServerAddress, "http://") {
 		models.SendToServerAddress = "http://" + models.SendToServerAddress
