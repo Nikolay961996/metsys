@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Nikolay961996/metsys/internal/agent"
 	"github.com/Nikolay961996/metsys/models"
+	"github.com/caarlos0/env/v6"
 	"os"
 	"strings"
 	"time"
@@ -12,6 +13,8 @@ import (
 
 func main() {
 	flags()
+	envs()
+
 	fmt.Println("Send to", models.SendToServerAddress)
 	pollTicker := time.NewTicker(models.PollInterval)
 	reportTicker := time.NewTicker(models.ReportInterval)
@@ -51,11 +54,38 @@ func flags() {
 		os.Exit(1)
 	}
 
-	if !strings.HasPrefix(models.SendToServerAddress, "http://") {
-		models.SendToServerAddress = "http://" + models.SendToServerAddress
-	}
-	models.SendToServerAddress = strings.TrimRight(models.SendToServerAddress, "/")
-
+	models.SendToServerAddress = fixProtocolPrefixAddress(models.SendToServerAddress)
 	models.ReportInterval = time.Duration(*r) * time.Second
 	models.PollInterval = time.Duration(*p) * time.Second
+}
+
+func envs() {
+	var c struct {
+		Address        string `env:"ADDRESS"`
+		ReportInterval int    `env:"REPORT_INTERVAL"`
+		PollInterval   int    `env:"POLL_INTERVAL"`
+	}
+	err := env.Parse(&c)
+	if err != nil {
+		panic(err)
+	}
+
+	if c.Address != "" {
+		models.SendToServerAddress = fixProtocolPrefixAddress(c.Address)
+	}
+	if c.ReportInterval != 0 {
+		models.ReportInterval = time.Duration(c.ReportInterval) * time.Second
+	}
+	if c.PollInterval != 0 {
+		models.PollInterval = time.Duration(c.PollInterval) * time.Second
+	}
+}
+
+func fixProtocolPrefixAddress(addr string) string {
+	if !strings.HasPrefix(addr, "http://") {
+		addr = "http://" + addr
+	}
+	addr = strings.TrimRight(addr, "/")
+
+	return addr
 }
