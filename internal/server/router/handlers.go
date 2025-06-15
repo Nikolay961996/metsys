@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func getDashboardHandler(storage repositories.Storage) http.HandlerFunc {
@@ -93,6 +94,23 @@ func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 
 		w.Header().Set("content-type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func updateErrorPathHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		if len(parts) != 4 {
+			http.Error(w, "Invalid URL format", http.StatusNotFound)
+			return
+		}
+
+		if parts[1] != models.Gauge && parts[1] != models.Counter {
+			http.Error(w, "Invalid metric type", http.StatusBadRequest)
+			return
+		}
+
+		http.NotFound(w, r)
 	}
 }
 
