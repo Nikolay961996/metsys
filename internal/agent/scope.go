@@ -82,14 +82,23 @@ func sendCounterMetrics(client *resty.Client, serverAddress string, metrics *Met
 }
 
 func sendMetric(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
-	url := fmt.Sprintf("%s/update/{metricType}/{metricName}/{metricValue}", serverAddress)
+	mr := models.Metrics{
+		ID:    metricName,
+		MType: metricType,
+	}
+	if metricType == models.Gauge {
+		v := metricValue.(float64)
+		mr.Value = &v
+	} else if metricType == models.Counter {
+		v := metricValue.(int64)
+		mr.Delta = &v
+	}
+
+	url := fmt.Sprintf("%s/update/", serverAddress)
 	resp, err := client.R().
-		SetHeader("Content-Type", "text/plain").
-		SetPathParams(map[string]string{
-			"metricType":  metricType,
-			"metricName":  metricName,
-			"metricValue": fmt.Sprintf("%v", metricValue),
-		}).Post(url)
+		SetHeader("Content-Type", "application/json").
+		SetBody(mr).
+		Post(url)
 
 	if err != nil {
 		return fmt.Errorf("failed to send metric (%s) = %v. %s", metricName, metricValue, err.Error())

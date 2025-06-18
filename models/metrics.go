@@ -6,16 +6,13 @@ import (
 )
 
 const (
-	Counter = "counter"
-	Gauge   = "gauge"
+	Counter           = "counter"
+	Gauge             = "gauge"
+	SendMetricTimeout = 5 * time.Second
 )
 
 var (
 	Log = zap.NewNop()
-)
-
-const (
-	SendMetricTimeout = 5 * time.Second
 )
 
 // NOTE: Не усложняем пример, вводя иерархическую вложенность структур.
@@ -28,7 +25,7 @@ type Metrics struct {
 	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
-	Hash  string   `json:"hash,omitempty"`
+	//Hash  string   `json:"hash,omitempty"`
 }
 
 func Initialize(level string) error {
