@@ -14,8 +14,8 @@ func MetricsRouterWithStorage(s *storage.MemStorage) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Get("/", WithLogger(getDashboardHandler(s)))
-	r.Get("/value/", WithLogger(getMetricValueHandler(s)))
-	r.Post("/update/", WithLogger(updateMetricHandler(s)))
+	r.Get("/value/{metricType}/{metricName}", WithLogger(getMetricValueHandler(s)))
+	r.Post("/update/{metricType}/{metricName}/{metricValue}", WithLogger(updateMetricHandler(s)))
 
 	r.Post("/update/*", WithLogger(updateErrorPathHandler()))
 
