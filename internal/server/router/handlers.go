@@ -72,6 +72,7 @@ func getMetricValueHandler(storage repositories.Storage) http.HandlerFunc {
 
 func getMetricValueJSONHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json; charset=utf-8")
 
 		var metricsReq models.Metrics
 		var buf bytes.Buffer
@@ -117,7 +118,6 @@ func getMetricValueJSONHandler(storage repositories.Storage) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("content-type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(resp)
 		if err != nil {
@@ -157,6 +157,7 @@ func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 
 func updateMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json; charset=utf-8")
 		if r.Method != http.MethodPost {
 			http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
 			return
@@ -199,7 +200,6 @@ func updateMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("content-type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, err = w.Write(resp)
 		if err != nil {
