@@ -57,7 +57,7 @@ func sendGaugeMetrics(client *resty.Client, serverAddress string, metrics *Metri
 	}
 
 	for k, v := range gauge {
-		err := sendMetric(client, serverAddress, models.Gauge, k, v)
+		err := sendMetricJSON(client, serverAddress, models.Gauge, k, v)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ func sendCounterMetrics(client *resty.Client, serverAddress string, metrics *Met
 	}
 
 	for k, v := range counter {
-		err := sendMetric(client, serverAddress, models.Counter, k, v)
+		err := sendMetricJSON(client, serverAddress, models.Counter, k, v)
 		if err != nil {
 			return err
 		}
