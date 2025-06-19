@@ -100,3 +100,32 @@ func sendMetric(client *resty.Client, serverAddress string, metricType string, m
 	}
 	return nil
 }
+
+func sendMetricJSON(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
+	mr := models.Metrics{
+		ID:    metricName,
+		MType: metricType,
+	}
+	if metricType == models.Gauge {
+		v := metricValue.(float64)
+		mr.Value = &v
+	} else if metricType == models.Counter {
+		v := metricValue.(int64)
+		mr.Delta = &v
+	}
+
+	url := fmt.Sprintf("%s/update/", serverAddress)
+	resp, err := client.R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(mr).
+		Post(url)
+
+	if err != nil {
+		return fmt.Errorf("failed to send metric (%s) = %v. %s", metricName, metricValue, err.Error())
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode())
+	}
+	return nil
+}
