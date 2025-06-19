@@ -74,55 +74,32 @@ func getMetricValueJSONHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json; charset=utf-8")
 
-		var metricsReq models.Metrics
-		var buf bytes.Buffer
-		_, err := buf.ReadFrom(r.Body)
-		defer r.Body.Close()
-
-		if err != nil {
-			models.Log.Error(fmt.Sprintf("Error reading body: %v", err))
-			http.Error(w, fmt.Sprintf("Error reading body: %v", err), http.StatusBadRequest)
+		mr := readJSONMetrics(w, r)
+		if mr == nil {
 			return
 		}
 
-		if err := json.Unmarshal(buf.Bytes(), &metricsReq); err != nil {
-			models.Log.Error(fmt.Sprintf("Error unmarshalling body: %v", err))
-			http.Error(w, fmt.Sprintf("Error unmarshalling body: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		switch metricsReq.MType {
+		switch mr.MType {
 		case models.Gauge:
-			v, err := storage.GetGauge(metricsReq.ID)
+			v, err := storage.GetGauge(mr.ID)
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			metricsReq.Value = &v
+			mr.Value = &v
 		case models.Counter:
-			v, err := storage.GetCounter(metricsReq.ID)
+			v, err := storage.GetCounter(mr.ID)
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			metricsReq.Delta = &v
+			mr.Delta = &v
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		resp, err := json.Marshal(metricsReq)
-		if err != nil {
-			models.Log.Error(fmt.Sprintf("Error marshalling body: %v", err))
-			http.Error(w, fmt.Sprintf("Error marshalling body: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		_, err = w.Write(resp)
-		if err != nil {
-			models.Log.Error(fmt.Sprintf("Error writing response: %v", err))
-		}
+		writeJSONMetrics(w, mr)
 	}
 }
 
@@ -132,13 +109,6 @@ func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 			http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
 			return
 		}
-
-		/*
-			if r.Header.Get("Content-Type") != "text/plain" {
-				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
-				return
-			}
-		*/
 
 		metricName, metricType, counterValue, gaugeValue, err := parseMetricData(r, w)
 		if err != nil {
@@ -163,20 +133,8 @@ func updateMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 			return
 		}
 
-		var mr models.Metrics
-		var buf bytes.Buffer
-		_, err := buf.ReadFrom(r.Body)
-		defer r.Body.Close()
-
-		if err != nil {
-			models.Log.Error(fmt.Sprintf("Error reading body: %v", err))
-			http.Error(w, fmt.Sprintf("Error reading body: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		if err := json.Unmarshal(buf.Bytes(), &mr); err != nil {
-			models.Log.Error(fmt.Sprintf("Error unmarshalling body: %v", err))
-			http.Error(w, fmt.Sprintf("Error unmarshalling body: %v", err), http.StatusBadRequest)
+		mr := readJSONMetrics(w, r)
+		if mr == nil {
 			return
 		}
 
@@ -193,18 +151,7 @@ func updateMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 			http.Error(w, fmt.Sprintf("Error unmarshalling body: %v", mr.MType), http.StatusBadRequest)
 		}
 
-		resp, err := json.Marshal(mr)
-		if err != nil {
-			models.Log.Error(fmt.Sprintf("Error marshalling body: %v", err))
-			http.Error(w, fmt.Sprintf("Error marshalling body: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		_, err = w.Write(resp)
-		if err != nil {
-			models.Log.Error(fmt.Sprintf("Error writing response: %v", err))
-		}
+		writeJSONMetrics(w, mr)
 	}
 }
 
@@ -255,4 +202,40 @@ func parseMetricData(r *http.Request, w http.ResponseWriter) (string, string, in
 	}
 
 	return metricName, metricType, counterValue, gaugeValue, nil
+}
+
+func writeJSONMetrics(w http.ResponseWriter, metrics *models.Metrics) {
+	resp, err := json.Marshal(metrics)
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("Error marshalling body: %v", err))
+		http.Error(w, fmt.Sprintf("Error marshalling body: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(resp)
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("Error writing response: %v", err))
+	}
+}
+
+func readJSONMetrics(w http.ResponseWriter, r *http.Request) *models.Metrics {
+	var mr models.Metrics
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r.Body)
+	defer r.Body.Close()
+
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("Error reading body: %v", err))
+		http.Error(w, fmt.Sprintf("Error reading body: %v", err), http.StatusBadRequest)
+		return nil
+	}
+
+	if err := json.Unmarshal(buf.Bytes(), &mr); err != nil {
+		models.Log.Error(fmt.Sprintf("Error unmarshalling body: %v", err))
+		http.Error(w, fmt.Sprintf("Error unmarshalling body: %v", err), http.StatusBadRequest)
+		return nil
+	}
+
+	return &mr
 }

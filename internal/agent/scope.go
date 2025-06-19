@@ -81,26 +81,6 @@ func sendCounterMetrics(client *resty.Client, serverAddress string, metrics *Met
 	return nil
 }
 
-func sendMetric(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
-	url := fmt.Sprintf("%s/update/{metricType}/{metricName}/{metricValue}", serverAddress)
-	resp, err := client.R().
-		SetHeader("Content-Type", "text/plain").
-		SetPathParams(map[string]string{
-			"metricType":  metricType,
-			"metricName":  metricName,
-			"metricValue": fmt.Sprintf("%v", metricValue),
-		}).Post(url)
-
-	if err != nil {
-		return fmt.Errorf("failed to send metric (%s) = %v. %s", metricName, metricValue, err.Error())
-	}
-
-	if resp.StatusCode() != http.StatusOK {
-		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode())
-	}
-	return nil
-}
-
 func sendMetricJSON(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
 	mr := models.Metrics{
 		ID:    metricName,
