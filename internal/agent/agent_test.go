@@ -56,7 +56,7 @@ func TestSendRequest(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Use(router.WithCompression)
+	r.Use(router.WithDecompressionRequest)
 	r.Post("/update/", func(w http.ResponseWriter, r *http.Request) {
 		metricServerTestHandler(r, t, &metrics)
 	})
