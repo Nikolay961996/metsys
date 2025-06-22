@@ -12,7 +12,7 @@ func MetricsRouter() *chi.Mux {
 
 func MetricsRouterWithStorage(s *storage.MemStorage) *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(WithCompression, WithLogger)
+	r.Use(WithCompression, WithCompressionResponse, WithLogger)
 
 	r.Get("/", getDashboardHandler(s))
 	r.Get("/value/{metricType}/{metricName}", getMetricValueHandler(s))

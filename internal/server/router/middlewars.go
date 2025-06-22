@@ -76,10 +76,10 @@ func WithCompression(h http.Handler) http.Handler {
 		// decompress request
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			gz, err := gzip.NewReader(r.Body)
-			defer gz.Close()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
+			defer gz.Close()
 			r.Body = gz
 		}
 
@@ -88,10 +88,27 @@ func WithCompression(h http.Handler) http.Handler {
 		if (strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/html")) &&
 			strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
-			defer gz.Close()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
+			defer gz.Close()
+			w.Header().Add("Content-Encoding", "gzip")
+			w = &compressedWriter{w, gz}
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
+
+func WithCompressionResponse(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// compressing
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			defer gz.Close()
 			w.Header().Add("Content-Encoding", "gzip")
 			w = &compressedWriter{w, gz}
 		}

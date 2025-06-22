@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/go-resty/resty/v2"
@@ -124,14 +123,14 @@ func compressToGzip(metrics models.Metrics) ([]byte, error) {
 	cw := gzip.NewWriter(buf)
 	d, err := json.Marshal(metrics)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error json marshaling: %s", err.Error()))
+		return nil, fmt.Errorf("error json marshaling: %s", err.Error())
 	}
 
 	if _, err := cw.Write(d); err != nil {
-		return nil, errors.New(fmt.Sprintf("error json write: %s", err.Error()))
+		return nil, fmt.Errorf("error json write: %s", err.Error())
 	}
 	if err := cw.Close(); err != nil {
-		return nil, errors.New(fmt.Sprintf("error closing gzip writer: %s", err.Error()))
+		return nil, fmt.Errorf("error closing gzip writer: %s", err.Error())
 	}
 
 	return buf.Bytes(), nil
