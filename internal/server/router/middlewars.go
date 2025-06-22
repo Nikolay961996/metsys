@@ -100,8 +100,8 @@ func WithCompression(h http.Handler) http.Handler {
 	})
 }
 
-func WithCompressionResponse(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func WithCompressionResponse(h http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		// compressing
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
@@ -114,5 +114,5 @@ func WithCompressionResponse(h http.Handler) http.Handler {
 		}
 
 		h.ServeHTTP(w, r)
-	})
+	}
 }

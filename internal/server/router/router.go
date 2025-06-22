@@ -12,13 +12,13 @@ func MetricsRouter() *chi.Mux {
 
 func MetricsRouterWithStorage(s *storage.MemStorage) *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(WithCompression, WithCompressionResponse, WithLogger)
+	r.Use(WithCompression, WithLogger)
 
-	r.Get("/", getDashboardHandler(s))
+	r.Get("/", WithCompressionResponse(getDashboardHandler(s)))
 	r.Get("/value/{metricType}/{metricName}", getMetricValueHandler(s))
 	r.Post("/update/{metricType}/{metricName}/{metricValue}", updateMetricHandler(s))
-	r.Post("/value/", getMetricValueJSONHandler(s))
-	r.Post("/update/", updateMetricJSONHandler(s))
+	r.Post("/value/", WithCompressionResponse(getMetricValueJSONHandler(s)))
+	r.Post("/update/", WithCompressionResponse(updateMetricJSONHandler(s)))
 
 	r.Post("/update/*", updateErrorPathHandler())
 
