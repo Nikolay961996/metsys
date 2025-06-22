@@ -1,9 +1,12 @@
 package router
 
 import (
+	"compress/gzip"
 	"github.com/Nikolay961996/metsys/models"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -30,8 +33,8 @@ func (w *loggingResponseWriter) Write(b []byte) (int, error) {
 	return size, err
 }
 
-func WithLogger(h http.Handler) http.HandlerFunc {
-	logFn := func(w http.ResponseWriter, r *http.Request) {
+func WithLogger(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		uri := r.RequestURI
 		method := r.Method
@@ -55,6 +58,44 @@ func WithLogger(h http.Handler) http.HandlerFunc {
 			zap.Int("status", lw.data.status),
 			zap.Int("size", lw.data.size),
 		)
-	}
-	return logFn
+	})
+}
+
+type compressedWriter struct {
+	http.ResponseWriter
+	Writer io.Writer
+}
+
+func (w *compressedWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func WithCompression(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// decompress request
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			gz, err := gzip.NewReader(r.Body)
+			defer gz.Close()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			r.Body = gz
+		}
+
+		// compressing
+		contentType := r.Header.Get("Content-Type")
+		if (strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/html")) &&
+			strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+			defer gz.Close()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			w.Header().Add("Content-Encoding", "gzip")
+			w = &compressedWriter{w, gz}
+		}
+
+		h.ServeHTTP(w, r)
+	})
 }

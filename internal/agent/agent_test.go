@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -55,6 +56,7 @@ func TestSendRequest(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
+	r.Use(router.WithCompression)
 	r.Post("/update/", func(w http.ResponseWriter, r *http.Request) {
 		metricServerTestHandler(r, t, &metrics)
 	})

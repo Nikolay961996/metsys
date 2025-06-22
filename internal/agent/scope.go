@@ -1,6 +1,10 @@
 package agent
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/go-resty/resty/v2"
@@ -94,10 +98,15 @@ func sendMetricJSON(client *resty.Client, serverAddress string, metricType strin
 		mr.Delta = &v
 	}
 
+	body, err := compressToGzip(mr)
+	if err != nil {
+		return fmt.Errorf("error compressing metrics: %s", err.Error())
+	}
 	url := fmt.Sprintf("%s/update/", serverAddress)
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
-		SetBody(mr).
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(body).
 		Post(url)
 
 	if err != nil {
@@ -108,4 +117,22 @@ func sendMetricJSON(client *resty.Client, serverAddress string, metricType strin
 		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode())
 	}
 	return nil
+}
+
+func compressToGzip(metrics models.Metrics) ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	cw := gzip.NewWriter(buf)
+	d, err := json.Marshal(metrics)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("error json marshaling: %s", err.Error()))
+	}
+
+	if _, err := cw.Write(d); err != nil {
+		return nil, errors.New(fmt.Sprintf("error json write: %s", err.Error()))
+	}
+	if err := cw.Close(); err != nil {
+		return nil, errors.New(fmt.Sprintf("error closing gzip writer: %s", err.Error()))
+	}
+
+	return buf.Bytes(), nil
 }
