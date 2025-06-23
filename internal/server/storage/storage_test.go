@@ -1,10 +1,12 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 )
 
@@ -47,4 +49,76 @@ func TestStorage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSyncSaveFile(t *testing.T) {
+	file := "tst.db"
+	s := NewMemStorage(file, true, false)
+	s.SetGauge("aaa", 123.4)
+	s.AddCounter("bbb", 987)
+
+	bytes, err := os.ReadFile(file)
+	require.NoError(t, err)
+	var s2 MemStorage
+	err = json.Unmarshal(bytes, &s2)
+	require.NoError(t, err)
+	g1, err := s.GetGauge("aaa")
+	require.NoError(t, err)
+	c1, err := s.GetCounter("bbb")
+	require.NoError(t, err)
+	g2, err := s2.GetGauge("aaa")
+	require.NoError(t, err)
+	c2, err := s2.GetCounter("bbb")
+	require.NoError(t, err)
+	assert.Equal(t, g1, g2)
+	assert.Equal(t, c1, c2)
+}
+
+func TestSaveFile(t *testing.T) {
+	file := "tst.db"
+	s := NewMemStorage(file, false, false)
+	s.SetGauge("aaa", 123.4)
+	s.AddCounter("bbb", 987)
+	s.TryFlushToFile()
+
+	bytes, err := os.ReadFile(file)
+	require.NoError(t, err)
+	var s2 MemStorage
+	err = json.Unmarshal(bytes, &s2)
+	require.NoError(t, err)
+	g1, err := s.GetGauge("aaa")
+	require.NoError(t, err)
+	g2, err := s2.GetGauge("aaa")
+	require.NoError(t, err)
+	assert.Equal(t, g1, g2)
+}
+
+func TestLoadFile(t *testing.T) {
+	file := "tst.db"
+	s := MemStorage{
+		GaugeMetrics: map[string]float64{
+			"aaa1": 13.3,
+		},
+		CounterMetrics: map[string]int64{
+			"ccc3": 888,
+		},
+	}
+
+	bytes, err := json.Marshal(s)
+	require.NoError(t, err)
+	err = os.WriteFile(file, bytes, 0666)
+	require.NoError(t, err)
+
+	s2 := NewMemStorage(file, false, true)
+	g1, err := s.GetGauge("aaa1")
+	require.NoError(t, err)
+	g2, err := s2.GetGauge("aaa1")
+	require.NoError(t, err)
+	assert.Equal(t, g1, g2)
+
+	c1, err := s.GetCounter("ccc3")
+	require.NoError(t, err)
+	c2, err := s2.GetCounter("ccc3")
+	require.NoError(t, err)
+	assert.Equal(t, c1, c2)
 }
