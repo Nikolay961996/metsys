@@ -34,8 +34,8 @@ func TestPositiveServer(t *testing.T) {
 		{"test #5", http.MethodPost, "/update/counter/memory/-99", want{http.StatusOK}},
 		{"test #6", http.MethodPost, "/update/counter/memory/0", want{http.StatusOK}},
 	}
-	s := storage.NewMemStorage()
-	ts := httptest.NewServer(router.MetricsRouterWithStorage(s))
+	s := storage.NewMemStorage("tst", false, false)
+	ts := httptest.NewServer(router.MetricsRouterWithServer(s))
 	defer ts.Close()
 
 	for _, tt := range tests {

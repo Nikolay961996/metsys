@@ -6,11 +6,11 @@ import (
 )
 
 func MetricsRouter() *chi.Mux {
-	metricsStorage := storage.NewMemStorage()
-	return MetricsRouterWithStorage(metricsStorage)
+	s := storage.NewMemStorage("/local.db", false, false)
+	return MetricsRouterWithServer(s)
 }
 
-func MetricsRouterWithStorage(s *storage.MemStorage) *chi.Mux {
+func MetricsRouterWithServer(s *storage.MemStorage) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(WithDecompressionRequest, WithLogger)
 

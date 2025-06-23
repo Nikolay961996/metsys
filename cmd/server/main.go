@@ -15,4 +15,5 @@ func main() {
 	c.Parse()
 	entity := server.InitServer(&c)
 	entity.Run()
+	defer entity.Stop()
 }

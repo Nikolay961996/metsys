@@ -27,7 +27,7 @@ func TestStorage(t *testing.T) {
 		{"test #8", models.Counter, "", 999, 999},
 	}
 
-	s := NewMemStorage()
+	s := NewMemStorage("tst", false, false)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
