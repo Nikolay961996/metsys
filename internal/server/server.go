@@ -42,10 +42,7 @@ func (s *MetricServer) Stop() {
 }
 
 func (s *MetricServer) backgroundSaver() {
-	for {
-		select {
-		case <-s.saveTimer.C:
-			s.Storage.TryFlushToFile()
-		}
+	for range s.saveTimer.C {
+		s.Storage.TryFlushToFile()
 	}
 }
