@@ -24,23 +24,23 @@ type MemStorage struct {
 
 func NewMemStorage(savesFile string, syncSave bool, restore bool) *MemStorage {
 	s := MemStorage{
-		savesFile: savesFile,
-		syncSave:  syncSave,
+		savesFile:      savesFile,
+		syncSave:       syncSave,
+		GaugeMetrics:   make(map[string]float64),
+		CounterMetrics: make(map[string]int64),
 	}
-	if !restore {
-		s.GaugeMetrics = make(map[string]float64)
-		s.CounterMetrics = make(map[string]int64)
-		return &s
-	}
-	d, err := os.ReadFile(savesFile)
-	if err != nil {
-		models.Log.Error(err.Error())
-		return nil
-	}
-	err = json.Unmarshal(d, &s)
-	if err != nil {
-		models.Log.Error(err.Error())
-		return nil
+
+	if restore {
+		d, err := os.ReadFile(savesFile)
+		if err != nil {
+			models.Log.Error(err.Error())
+			return &s
+		}
+		err = json.Unmarshal(d, &s)
+		if err != nil {
+			models.Log.Error(err.Error())
+			return &s
+		}
 	}
 
 	return &s

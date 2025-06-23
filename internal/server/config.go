@@ -20,7 +20,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		RunOnServerAddress: "localhost:8080",
-		StoreInterval:      3000 * time.Second,
+		StoreInterval:      300 * time.Second,
 		FileStoragePath:    "/metsys.db",
 		Restore:            false,
 	}
