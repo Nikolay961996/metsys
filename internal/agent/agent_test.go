@@ -1,13 +1,16 @@
 package agent
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 )
 
@@ -53,7 +56,8 @@ func TestSendRequest(t *testing.T) {
 	}
 
 	r := chi.NewRouter()
-	r.Post("/update/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
+	r.Use(router.WithDecompressionRequest)
+	r.Post("/update/", func(w http.ResponseWriter, r *http.Request) {
 		metricServerTestHandler(r, t, &metrics)
 	})
 
@@ -64,16 +68,20 @@ func TestSendRequest(t *testing.T) {
 }
 
 func metricServerTestHandler(r *http.Request, t *testing.T, metrics *Metrics) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
-	metricValue := chi.URLParam(r, "metricValue")
+	var mr models.Metrics
+	var buf bytes.Buffer
 
-	switch metricType {
+	_, err := buf.ReadFrom(r.Body)
+	defer r.Body.Close()
+	require.NoError(t, err)
+	err = json.Unmarshal(buf.Bytes(), &mr)
+	require.NoError(t, err)
+
+	switch mr.MType {
 	case models.Gauge:
-		v, err := strconv.ParseFloat(metricValue, 64)
-		assert.NoError(t, err)
+		v := *mr.Value
 
-		switch metricName {
+		switch mr.ID {
 		case "Alloc":
 			assert.Equal(t, metrics.Alloc, v)
 		case "BuckHashSys":
@@ -133,13 +141,12 @@ func metricServerTestHandler(r *http.Request, t *testing.T, metrics *Metrics) {
 		}
 
 	case models.Counter:
-		v, err := strconv.ParseInt(metricValue, 10, 64)
-		assert.NoError(t, err)
-		switch metricName {
+		v := *mr.Delta
+		switch mr.ID {
 		case "PollCount":
 			assert.Equal(t, metrics.PollCount, v)
 		}
 	default:
-		assert.Error(t, fmt.Errorf("invalid metric type: %s", metricType))
+		assert.Error(t, fmt.Errorf("invalid metric type: %s", mr.MType))
 	}
 }

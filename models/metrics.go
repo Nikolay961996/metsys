@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"go.uber.org/zap"
+	"time"
+)
 
 const (
 	Counter = "counter"
@@ -8,10 +11,7 @@ const (
 )
 
 var (
-	RunOnServerAddress  = "http://localhost:8080"
-	SendToServerAddress = "http://localhost:8080"
-	PollInterval        = 2 * time.Second
-	ReportInterval      = 10 * time.Second
+	Log = zap.NewNop()
 )
 
 const (
@@ -28,5 +28,20 @@ type Metrics struct {
 	MType string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
-	Hash  string   `json:"hash,omitempty"`
+	//Hash  string   `json:"hash,omitempty"`
+}
+
+func Initialize(level string) error {
+	lvl, err := zap.ParseAtomicLevel(level)
+	if err != nil {
+		return err
+	}
+	cfg := zap.NewDevelopmentConfig()
+	cfg.Level = lvl
+	zl, err := cfg.Build()
+	if err != nil {
+		return err
+	}
+	Log = zl
+	return nil
 }
