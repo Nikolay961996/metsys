@@ -70,36 +70,37 @@ func getMetricValueHandler(storage repositories.Storage) http.HandlerFunc {
 	}
 }
 
+func baseJSONHandler(w http.ResponseWriter, r *http.Request, storage repositories.Storage, innerFunc func(http.ResponseWriter, repositories.Storage, *models.Metrics) bool) {
+	w.Header().Set("content-type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	mr := readJSONMetrics(w, r)
+	if mr == nil {
+		return
+	}
+
+	if innerFunc != nil {
+		ok := innerFunc(w, storage, mr)
+		if !ok {
+			return
+		}
+	}
+
+	actualMr, err := getActualMetrics(storage, mr)
+	if err != nil {
+		models.Log.Error(err.Error())
+		http.Error(w, fmt.Sprintf(err.Error()), http.StatusNotFound)
+		return
+	}
+
+	writeJSONMetrics(w, actualMr)
+}
+
 func getMetricValueJSONHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("content-type", "application/json; charset=utf-8")
-
-		mr := readJSONMetrics(w, r)
-		if mr == nil {
-			return
-		}
-
-		switch mr.MType {
-		case models.Gauge:
-			v, err := storage.GetGauge(mr.ID)
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			mr.Value = &v
-		case models.Counter:
-			v, err := storage.GetCounter(mr.ID)
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			mr.Delta = &v
-		default:
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		writeJSONMetrics(w, mr)
+		baseJSONHandler(w, r, storage, nil)
 	}
 }
 
@@ -127,32 +128,50 @@ func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 
 func updateMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("content-type", "application/json; charset=utf-8")
-		if r.Method != http.MethodPost {
-			http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		mr := readJSONMetrics(w, r)
-		if mr == nil {
-			return
-		}
-
-		if mr.MType == models.Gauge {
-			storage.SetGauge(mr.ID, *mr.Value)
-			v, _ := storage.GetGauge(mr.ID)
-			mr.Value = &v
-		} else if mr.MType == models.Counter {
-			storage.AddCounter(mr.ID, *mr.Delta)
-			v, _ := storage.GetCounter(mr.ID)
-			mr.Delta = &v
-		} else {
-			models.Log.Error(fmt.Sprintf("Error undefind type: %v", mr.MType))
-			http.Error(w, fmt.Sprintf("Error unmarshalling body: %v", mr.MType), http.StatusBadRequest)
-		}
-
-		writeJSONMetrics(w, mr)
+		baseJSONHandler(w, r, storage, updateMetrics)
 	}
+}
+
+func getActualMetrics(storage repositories.Storage, mr *models.Metrics) (*models.Metrics, error) {
+	var actual = models.Metrics{
+		ID:    mr.ID,
+		MType: mr.MType,
+		Value: nil,
+		Delta: nil,
+	}
+
+	switch mr.MType {
+	case models.Gauge:
+		v, err := storage.GetGauge(mr.ID)
+		if err != nil {
+			return nil, errors.New("metric not found")
+		}
+		actual.Value = &v
+	case models.Counter:
+		v, err := storage.GetCounter(mr.ID)
+		if err != nil {
+			return nil, errors.New("metric not found")
+		}
+		actual.Delta = &v
+	default:
+		return nil, errors.New("metric type not found")
+	}
+
+	return &actual, nil
+}
+
+func updateMetrics(w http.ResponseWriter, storage repositories.Storage, mr *models.Metrics) bool {
+	if mr.MType == models.Gauge {
+		storage.SetGauge(mr.ID, *mr.Value)
+	} else if mr.MType == models.Counter {
+		storage.AddCounter(mr.ID, *mr.Delta)
+	} else {
+		models.Log.Error(fmt.Sprintf("Error undefind type: %v", mr.MType))
+		http.Error(w, fmt.Sprintf("Error unmarshalling body: %v", mr.MType), http.StatusBadRequest)
+		return false
+	}
+
+	return true
 }
 
 func updateErrorPathHandler() http.HandlerFunc {
