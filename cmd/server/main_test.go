@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/Nikolay961996/metsys/internal/server/router"
@@ -35,7 +36,12 @@ func TestPositiveServer(t *testing.T) {
 		{"test #6", http.MethodPost, "/update/counter/memory/0", want{http.StatusOK}},
 	}
 	s := storage.NewMemStorage("tst", false, false)
-	ts := httptest.NewServer(router.MetricsRouterWithServer(s))
+	db, err := sql.Open("pgx", "host=localhost user=postgres password=admin dbname=metsys sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
+
+	ts := httptest.NewServer(router.MetricsRouterWithServer(s, db))
 	defer ts.Close()
 
 	for _, tt := range tests {
