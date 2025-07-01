@@ -31,7 +31,7 @@ func baseJSONHandler(w http.ResponseWriter, r *http.Request, storage repositorie
 	actualMr, err := getActualMetrics(storage, mr)
 	if err != nil {
 		models.Log.Error(err.Error())
-		http.Error(w, fmt.Sprintf(err.Error()), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
