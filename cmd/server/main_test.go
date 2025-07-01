@@ -89,7 +89,7 @@ func TestNegativeServer(t *testing.T) {
 		{"test #8", http.MethodPost, "/update///", "text/plain", want{http.StatusNotFound}},
 	}
 
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouterTest())
 	defer ts.Close()
 
 	for _, tt := range tests {
@@ -128,7 +128,7 @@ func TestServer(t *testing.T) {
 		{"test #9", http.MethodPost, "/update///", want{http.StatusNotFound}},
 	}
 
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouterTest())
 	defer ts.Close()
 
 	for _, tt := range tests {
@@ -168,7 +168,7 @@ func TestGetMetric(t *testing.T) {
 		{"test #10", http.MethodGet, "/value/counter/cp", want{http.StatusOK, "223"}},
 	}
 
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouterTest())
 	defer ts.Close()
 
 	for _, tt := range tests {
@@ -213,7 +213,7 @@ func TestJSONSupport(t *testing.T) {
 		{"test #6", http.MethodPost, "/value/", models.Metrics{ID: "cp", MType: models.Counter}, 0, 0, want{http.StatusOK, 0, 223}},
 	}
 
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouterTest())
 	defer ts.Close()
 
 	for _, tt := range tests {
