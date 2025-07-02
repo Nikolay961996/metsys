@@ -15,8 +15,8 @@ type MetricDto struct {
 }
 
 type MemStorage struct {
-	savesFile string
-	syncSave  bool
+	savesFilePath string
+	syncSave      bool
 
 	GaugeMetrics   map[string]float64
 	CounterMetrics map[string]int64
@@ -24,7 +24,7 @@ type MemStorage struct {
 
 func NewMemStorage(savesFile string, syncSave bool, restore bool) *MemStorage {
 	s := MemStorage{
-		savesFile:      savesFile,
+		savesFilePath:  savesFile,
 		syncSave:       syncSave,
 		GaugeMetrics:   make(map[string]float64),
 		CounterMetrics: make(map[string]int64),
@@ -102,7 +102,7 @@ func (m *MemStorage) TryFlushToFile() {
 		models.Log.Error(err.Error())
 		return
 	}
-	err = os.WriteFile(m.savesFile, d, 0666)
+	err = os.WriteFile(m.savesFilePath, d, 0666)
 	if err != nil {
 		models.Log.Error(err.Error())
 		return

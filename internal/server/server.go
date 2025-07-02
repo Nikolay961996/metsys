@@ -5,7 +5,6 @@ import (
 	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
 	"github.com/Nikolay961996/metsys/models"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"net/http"
 	"time"
 )
@@ -24,6 +23,8 @@ func InitServer(c *Config) MetricServer {
 	if err != nil {
 		panic(err)
 	}
+
+	_ = storage.NewDBStorage(c.DatabaseDSN)
 
 	a := MetricServer{
 		DB:         db,
