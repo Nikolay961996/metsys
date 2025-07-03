@@ -3,16 +3,11 @@ package storage
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
 	"os"
 	"strconv"
 )
-
-type MetricDto struct {
-	Name  string
-	Type  string
-	Value string
-}
 
 type MemStorage struct {
 	savesFilePath string
@@ -76,17 +71,17 @@ func (m *MemStorage) GetCounter(metricName string) (int64, error) {
 	return value, nil
 }
 
-func (m *MemStorage) GetAll() []MetricDto {
-	var r []MetricDto
+func (m *MemStorage) GetAll() []repositories.MetricDto {
+	var r []repositories.MetricDto
 	for k, v := range m.GaugeMetrics {
-		r = append(r, MetricDto{
+		r = append(r, repositories.MetricDto{
 			Name:  k,
 			Type:  models.Gauge,
 			Value: strconv.FormatFloat(v, 'f', -1, 64),
 		})
 	}
 	for k, v := range m.CounterMetrics {
-		r = append(r, MetricDto{
+		r = append(r, repositories.MetricDto{
 			Name:  k,
 			Type:  models.Counter,
 			Value: strconv.FormatInt(v, 10),

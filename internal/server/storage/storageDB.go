@@ -1,14 +1,17 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/postgres"
 	_ "github.com/golang-migrate/migrate/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"strconv"
 )
 
 type DBStorage struct {
@@ -24,59 +27,95 @@ func NewDBStorage(databaseDSN string) *DBStorage {
 	return &s
 }
 
-/*
 func (m *DBStorage) SetGauge(metricName string, value float64) {
-	m.GaugeMetrics[metricName] = value
-	if m.syncSave {
-		m.TryFlushToFile()
-	}
+	ctx := context.Background()
+	_, err := m.db.ExecContext(ctx,
+		`
+		INSERT INTO metrics (id, type, value)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (id, type) DO UPDATE 
+		SET value = EXCLUDED.value;`,
+		metricName, models.Gauge, value)
 
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("Failed to set for metric %s: %s", metricName, err.Error()))
+	}
 }
 
 func (m *DBStorage) GetGauge(metricName string) (float64, error) {
-	value, ok := m.GaugeMetrics[metricName]
-	if !ok {
-		return 0, errors.New("not Found")
-	}
-	return value, nil
+	ctx := context.Background()
+	var value float64
+	err := m.db.QueryRowContext(ctx,
+		`SELECT value FROM metrics WHERE id = $1 AND type = $2`,
+		metricName, models.Gauge).
+		Scan(&value)
+	return value, err
 }
 
 func (m *DBStorage) AddCounter(metricName string, value int64) {
-	m.CounterMetrics[metricName] += value
-	if m.syncSave {
-		m.TryFlushToFile()
+	ctx := context.Background()
+	_, err := m.db.ExecContext(ctx,
+		`
+		INSERT INTO metrics (id, type, delta)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (id, type) DO UPDATE 
+		SET delta = EXCLUDED.delta + metrics.delta;`,
+		metricName, models.Counter, value)
+
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("Failed to set for metric %s: %s", metricName, err.Error()))
 	}
 }
 
 func (m *DBStorage) GetCounter(metricName string) (int64, error) {
-	value, ok := m.CounterMetrics[metricName]
-	if !ok {
-		return 0, errors.New("not Found")
-	}
-	return value, nil
+	ctx := context.Background()
+	var delta int64
+	err := m.db.QueryRowContext(ctx,
+		`SELECT delta FROM metrics WHERE id = $1 AND type = $2`,
+		metricName, models.Counter).
+		Scan(&delta)
+	return delta, err
 }
 
-func (m *DBStorage) GetAll() []MetricDto {
-	var r []MetricDto
-	for k, v := range m.GaugeMetrics {
-		r = append(r, MetricDto{
-			Name:  k,
-			Type:  models.Gauge,
-			Value: strconv.FormatFloat(v, 'f', -1, 64),
-		})
+func (m *DBStorage) GetAll() []repositories.MetricDto {
+	var r []repositories.MetricDto
+
+	ctx := context.Background()
+	rows, err := m.db.QueryContext(ctx, `SELECT id, type, value, delta FROM metrics`)
+	defer rows.Close()
+	if err != nil {
+		models.Log.Error(err.Error())
+		return r
 	}
-	for k, v := range m.CounterMetrics {
-		r = append(r, MetricDto{
-			Name:  k,
-			Type:  models.Counter,
-			Value: strconv.FormatInt(v, 10),
-		})
+
+	for rows.Next() {
+		var m repositories.MetricDto
+		var valueNull sql.NullFloat64
+		var deltaNull sql.NullInt64
+
+		err = rows.Scan(&m.Name, &m.Type, &valueNull, &deltaNull)
+		if err != nil {
+			models.Log.Error(err.Error())
+			return r
+		}
+		if valueNull.Valid {
+			m.Value = strconv.FormatFloat(valueNull.Float64, 'f', -1, 64)
+		} else if deltaNull.Valid {
+			m.Value = strconv.FormatInt(deltaNull.Int64, 10)
+		}
+
+		r = append(r, m)
 	}
+
+	err = rows.Err()
+	if err != nil {
+		models.Log.Error(err.Error())
+	}
+
 	return r
 }
 
 func (m *DBStorage) TryFlushToFile() {}
-*/
 
 func (m *DBStorage) migrate() {
 	driver, err := postgres.WithInstance(m.db, &postgres.Config{})

@@ -2,6 +2,7 @@ package router
 
 import (
 	"database/sql"
+	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
 	"github.com/go-chi/chi/v5"
 )
@@ -16,7 +17,7 @@ func MetricsRouterTest() *chi.Mux {
 	return MetricsRouterWithServer(s, db)
 }
 
-func MetricsRouterWithServer(s *storage.MemStorage, db *sql.DB) *chi.Mux {
+func MetricsRouterWithServer(s repositories.Storage, db *sql.DB) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(WithDecompressionRequest, WithLogger)
 

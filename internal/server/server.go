@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
 	"github.com/Nikolay961996/metsys/models"
@@ -10,7 +11,7 @@ import (
 )
 
 type MetricServer struct {
-	Storage *storage.MemStorage
+	Storage repositories.Storage
 	DB      *sql.DB
 
 	config     *Config
@@ -24,12 +25,13 @@ func InitServer(c *Config) MetricServer {
 		panic(err)
 	}
 
-	_ = storage.NewDBStorage(c.DatabaseDSN)
+	//ms := storage.NewMemStorage(c.FileStoragePath, c.StoreInterval == 0, c.Restore)
+	dbs := storage.NewDBStorage(c.DatabaseDSN)
 
 	a := MetricServer{
 		DB:         db,
 		config:     c,
-		Storage:    storage.NewMemStorage(c.FileStoragePath, c.StoreInterval == 0, c.Restore),
+		Storage:    dbs,
 		isSyncSave: c.StoreInterval == 0,
 		saveTimer:  time.NewTicker(c.StoreInterval),
 	}
