@@ -4,21 +4,27 @@ import (
 	"encoding/json"
 	"github.com/Nikolay961996/metsys/models"
 	"os"
+	"time"
 )
 
 type FileStorage struct {
 	*MemStorage
 
+	isSyncSave    bool
+	saveTimer     *time.Ticker
 	savesFilePath string
-	syncSave      bool
 }
 
-func NewFileStorage(savesFile string, syncSave bool, restore bool) *FileStorage {
-	m := NewMemStorage()
+func NewFileStorage(savesFile string, savePeriod time.Duration, restore bool) *FileStorage {
 	s := FileStorage{
-		MemStorage:    m,
+		MemStorage:    NewMemStorage(),
 		savesFilePath: savesFile,
-		syncSave:      syncSave,
+		isSyncSave:    savePeriod == 0,
+		saveTimer:     time.NewTicker(savePeriod),
+	}
+
+	if !s.isSyncSave {
+		go s.backgroundSaver()
 	}
 
 	if restore {
@@ -39,50 +45,29 @@ func NewFileStorage(savesFile string, syncSave bool, restore bool) *FileStorage 
 
 func (m *FileStorage) SetGauge(metricName string, value float64) {
 	m.MemStorage.SetGauge(metricName, value)
-	if m.syncSave {
-		m.TryFlushToFile()
+	if m.isSyncSave {
+		m.tryFlushToFile()
 	}
 }
-
-//func (m *FileStorage) GetGauge(metricName string) (float64, error) {
-//	return m.MemStorage.GetGauge(metricName)
-//}
 
 func (m *FileStorage) AddCounter(metricName string, value int64) {
 	m.MemStorage.AddCounter(metricName, value)
-	if m.syncSave {
-		m.TryFlushToFile()
+	if m.isSyncSave {
+		m.tryFlushToFile()
 	}
 }
 
-//func (m *FileStorage) GetCounter(metricName string) (int64, error) {
-//	value, ok := m.CounterMetrics[metricName]
-//	if !ok {
-//		return 0, errors.New("not Found")
-//	}
-//	return value, nil
-//}
+func (m *FileStorage) Close() {
+	defer m.saveTimer.Stop()
+}
 
-//func (m *FileStorage) GetAll() []repositories.MetricDto {
-//	var r []repositories.MetricDto
-//	for k, v := range m.GaugeMetrics {
-//		r = append(r, repositories.MetricDto{
-//			Name:  k,
-//			Type:  models.Gauge,
-//			Value: strconv.FormatFloat(v, 'f', -1, 64),
-//		})
-//	}
-//	for k, v := range m.CounterMetrics {
-//		r = append(r, repositories.MetricDto{
-//			Name:  k,
-//			Type:  models.Counter,
-//			Value: strconv.FormatInt(v, 10),
-//		})
-//	}
-//	return r
-//}
+func (m *FileStorage) backgroundSaver() {
+	for range m.saveTimer.C {
+		m.tryFlushToFile()
+	}
+}
 
-func (m *FileStorage) TryFlushToFile() {
+func (m *FileStorage) tryFlushToFile() {
 	models.Log.Info("Metrics try save")
 	d, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {

@@ -5,10 +5,11 @@ import (
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
 	"github.com/go-chi/chi/v5"
+	"time"
 )
 
 func MetricsRouterTest() *chi.Mux {
-	s := storage.NewFileStorage("/local.db", false, false)
+	s := storage.NewFileStorage("/local.db", 5*time.Second, false)
 	db, err := sql.Open("pgx", "host=localhost user=postgres password=admin dbname=metsys sslmode=disable")
 	if err != nil {
 		panic(err)

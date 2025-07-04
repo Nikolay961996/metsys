@@ -82,11 +82,11 @@ func (m *DBStorage) GetAll() []repositories.MetricDto {
 
 	ctx := context.Background()
 	rows, err := m.db.QueryContext(ctx, `SELECT id, type, value, delta FROM metrics`)
-	defer rows.Close()
 	if err != nil {
 		models.Log.Error(err.Error())
 		return r
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var m repositories.MetricDto
@@ -115,7 +115,9 @@ func (m *DBStorage) GetAll() []repositories.MetricDto {
 	return r
 }
 
-func (m *DBStorage) TryFlushToFile() {}
+func (m *DBStorage) Close() {
+	defer m.db.Close()
+}
 
 func (m *DBStorage) migrate() {
 	driver, err := postgres.WithInstance(m.db, &postgres.Config{})

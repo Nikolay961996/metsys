@@ -22,9 +22,9 @@ func DefaultConfig() Config {
 	return Config{
 		RunOnServerAddress: "localhost:8080",
 		StoreInterval:      300 * time.Second,
-		FileStoragePath:    "", // /metsys.db
+		FileStoragePath:    "",
 		Restore:            false,
-		DatabaseDSN:        "", // host=localhost user=postgres password=admin dbname=metsys sslmode=disable
+		DatabaseDSN:        "",
 	}
 }
 

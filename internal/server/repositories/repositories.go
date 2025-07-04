@@ -12,5 +12,5 @@ type Storage interface {
 	AddCounter(metricName string, value int64)
 	GetCounter(metricName string) (int64, error)
 	GetAll() []MetricDto
-	TryFlushToFile()
+	Close()
 }

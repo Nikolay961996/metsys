@@ -7,16 +7,13 @@ import (
 	"github.com/Nikolay961996/metsys/internal/server/storage"
 	"github.com/Nikolay961996/metsys/models"
 	"net/http"
-	"time"
 )
 
 type MetricServer struct {
 	Storage repositories.Storage
 	DB      *sql.DB
 
-	config     *Config
-	isSyncSave bool
-	saveTimer  *time.Ticker
+	config *Config
 }
 
 func InitServer(c *Config) MetricServer {
@@ -30,25 +27,20 @@ func InitServer(c *Config) MetricServer {
 	if c.DatabaseDSN != "" {
 		s = storage.NewDBStorage(c.DatabaseDSN)
 	} else if c.FileStoragePath != "" {
-		s = storage.NewFileStorage(c.FileStoragePath, c.StoreInterval == 0, c.Restore)
+		s = storage.NewFileStorage(c.FileStoragePath, c.StoreInterval, c.Restore) // c.FileStoragePath, c.StoreInterval == 0, c.Restore
 	} else {
 		s = storage.NewMemStorage()
 	}
 
 	a := MetricServer{
-		DB:         db,
-		config:     c,
-		Storage:    s,
-		isSyncSave: c.StoreInterval == 0,
-		saveTimer:  time.NewTicker(c.StoreInterval),
+		DB:      db,
+		config:  c,
+		Storage: s,
 	}
 	return a
 }
 
 func (s *MetricServer) Run() {
-	if !s.isSyncSave {
-		go s.backgroundSaver()
-	}
 	err := http.ListenAndServe(s.config.RunOnServerAddress, router.MetricsRouterWithServer(s.Storage, s.DB))
 	if err != nil {
 		models.Log.Error(err.Error())
@@ -58,11 +50,5 @@ func (s *MetricServer) Run() {
 func (s *MetricServer) Stop() {
 	models.Log.Warn("Server shutting down")
 	_ = s.DB.Close()
-	s.saveTimer.Stop()
-}
-
-func (s *MetricServer) backgroundSaver() {
-	for range s.saveTimer.C {
-		s.Storage.TryFlushToFile()
-	}
+	s.Storage.Close()
 }

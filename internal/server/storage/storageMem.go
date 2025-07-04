@@ -64,4 +64,4 @@ func (m *MemStorage) GetAll() []repositories.MetricDto {
 	return r
 }
 
-func (m *MemStorage) TryFlushToFile() {}
+func (m *MemStorage) Close() {}
