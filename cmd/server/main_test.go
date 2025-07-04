@@ -35,7 +35,7 @@ func TestPositiveServer(t *testing.T) {
 		{"test #5", http.MethodPost, "/update/counter/memory/-99", want{http.StatusOK}},
 		{"test #6", http.MethodPost, "/update/counter/memory/0", want{http.StatusOK}},
 	}
-	s := storage.NewMemStorage("tst", false, false)
+	s := storage.NewFileStorage("tst", false, false)
 	db, err := sql.Open("pgx", "host=localhost user=postgres password=admin dbname=metsys sslmode=disable")
 	if err != nil {
 		panic(err)

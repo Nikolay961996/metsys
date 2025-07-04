@@ -29,7 +29,7 @@ func TestStorage(t *testing.T) {
 		{"test #8", models.Counter, "", 999, 999},
 	}
 
-	s := NewMemStorage("tst", false, false)
+	s := NewFileStorage("tst", false, false)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -53,7 +53,7 @@ func TestStorage(t *testing.T) {
 
 func TestSyncSaveFile(t *testing.T) {
 	file := "tst.db"
-	s := NewMemStorage(file, true, false)
+	s := NewFileStorage(file, true, false)
 	s.SetGauge("aaa", 123.4)
 	s.AddCounter("bbb", 987)
 
@@ -76,7 +76,7 @@ func TestSyncSaveFile(t *testing.T) {
 
 func TestSaveFile(t *testing.T) {
 	file := "tst.db"
-	s := NewMemStorage(file, false, false)
+	s := NewFileStorage(file, false, false)
 	s.SetGauge("aaa", 123.4)
 	s.AddCounter("bbb", 987)
 	s.TryFlushToFile()
@@ -109,7 +109,7 @@ func TestLoadFile(t *testing.T) {
 	err = os.WriteFile(file, bytes, 0666)
 	require.NoError(t, err)
 
-	s2 := NewMemStorage(file, false, true)
+	s2 := NewFileStorage(file, false, true)
 	g1, err := s.GetGauge("aaa1")
 	require.NoError(t, err)
 	g2, err := s2.GetGauge("aaa1")

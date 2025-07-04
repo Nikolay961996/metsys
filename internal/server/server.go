@@ -25,13 +25,20 @@ func InitServer(c *Config) MetricServer {
 		panic(err)
 	}
 
-	//ms := storage.NewMemStorage(c.FileStoragePath, c.StoreInterval == 0, c.Restore)
-	dbs := storage.NewDBStorage(c.DatabaseDSN)
+	var s repositories.Storage
+
+	if c.DatabaseDSN != "" {
+		s = storage.NewDBStorage(c.DatabaseDSN)
+	} else if c.FileStoragePath != "" {
+		s = storage.NewFileStorage(c.FileStoragePath, c.StoreInterval == 0, c.Restore)
+	} else {
+		s = storage.NewMemStorage()
+	}
 
 	a := MetricServer{
 		DB:         db,
 		config:     c,
-		Storage:    dbs,
+		Storage:    s,
 		isSyncSave: c.StoreInterval == 0,
 		saveTimer:  time.NewTicker(c.StoreInterval),
 	}

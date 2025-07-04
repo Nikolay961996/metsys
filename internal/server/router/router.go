@@ -8,7 +8,7 @@ import (
 )
 
 func MetricsRouterTest() *chi.Mux {
-	s := storage.NewMemStorage("/local.db", false, false)
+	s := storage.NewFileStorage("/local.db", false, false)
 	db, err := sql.Open("pgx", "host=localhost user=postgres password=admin dbname=metsys sslmode=disable")
 	if err != nil {
 		panic(err)
