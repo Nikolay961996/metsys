@@ -85,6 +85,12 @@ func sendCounterMetrics(client *resty.Client, serverAddress string, metrics *Met
 }
 
 func sendMetricJSON(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
+	mr := createMetrics(metricType, metricName, metricValue)
+	err := sendToServer(client, serverAddress, mr)
+	return err
+}
+
+func createMetrics(metricType string, metricName string, metricValue any) models.Metrics {
 	mr := models.Metrics{
 		ID:    metricName,
 		MType: metricType,
@@ -97,6 +103,10 @@ func sendMetricJSON(client *resty.Client, serverAddress string, metricType strin
 		mr.Delta = &v
 	}
 
+	return mr
+}
+
+func sendToServer(client *resty.Client, serverAddress string, mr models.Metrics) error {
 	body, err := compressToGzip(mr)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
@@ -109,12 +119,13 @@ func sendMetricJSON(client *resty.Client, serverAddress string, metricType strin
 		Post(url)
 
 	if err != nil {
-		return fmt.Errorf("failed to send metric (%s) = %v. %s", metricName, metricValue, err.Error())
+		return fmt.Errorf("failed to send metric (%s). %s", mr.ID, err.Error())
 	}
 
 	if resp.StatusCode() != http.StatusOK {
 		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode())
 	}
+
 	return nil
 }
 

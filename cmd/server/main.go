@@ -14,6 +14,6 @@ func main() {
 	c := server.DefaultConfig()
 	c.Parse()
 	entity := server.InitServer(&c)
-	entity.Run()
+	entity.Run(c.RunOnServerAddress)
 	defer entity.Stop()
 }

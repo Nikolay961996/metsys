@@ -1,36 +1,27 @@
 package router
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"errors"
-	"fmt"
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/go-chi/chi/v5"
-	"html/template"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
-func getDashboardHandler(storage repositories.Storage) http.HandlerFunc {
+func pingDatabase(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		metrics := storage.GetAll()
-
-		t, err := template.ParseFiles("./internal/server/router/metrics.html")
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error parsing template: %v", err), http.StatusInternalServerError)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		if err := storage.PingContext(ctx); err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-		if err := t.Execute(w, metrics); err != nil {
-			http.Error(w, fmt.Sprintf("Error executing template: %v", err), http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -70,39 +61,6 @@ func getMetricValueHandler(storage repositories.Storage) http.HandlerFunc {
 	}
 }
 
-func getMetricValueJSONHandler(storage repositories.Storage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("content-type", "application/json; charset=utf-8")
-
-		mr := readJSONMetrics(w, r)
-		if mr == nil {
-			return
-		}
-
-		switch mr.MType {
-		case models.Gauge:
-			v, err := storage.GetGauge(mr.ID)
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			mr.Value = &v
-		case models.Counter:
-			v, err := storage.GetCounter(mr.ID)
-			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			mr.Delta = &v
-		default:
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-
-		writeJSONMetrics(w, mr)
-	}
-}
-
 func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -122,36 +80,6 @@ func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 
 		w.Header().Set("content-type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func updateMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("content-type", "application/json; charset=utf-8")
-		if r.Method != http.MethodPost {
-			http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		mr := readJSONMetrics(w, r)
-		if mr == nil {
-			return
-		}
-
-		if mr.MType == models.Gauge {
-			storage.SetGauge(mr.ID, *mr.Value)
-			v, _ := storage.GetGauge(mr.ID)
-			mr.Value = &v
-		} else if mr.MType == models.Counter {
-			storage.AddCounter(mr.ID, *mr.Delta)
-			v, _ := storage.GetCounter(mr.ID)
-			mr.Delta = &v
-		} else {
-			models.Log.Error(fmt.Sprintf("Error undefind type: %v", mr.MType))
-			http.Error(w, fmt.Sprintf("Error unmarshalling body: %v", mr.MType), http.StatusBadRequest)
-		}
-
-		writeJSONMetrics(w, mr)
 	}
 }
 
@@ -202,40 +130,4 @@ func parseMetricData(r *http.Request, w http.ResponseWriter) (string, string, in
 	}
 
 	return metricName, metricType, counterValue, gaugeValue, nil
-}
-
-func writeJSONMetrics(w http.ResponseWriter, metrics *models.Metrics) {
-	resp, err := json.Marshal(metrics)
-	if err != nil {
-		models.Log.Error(fmt.Sprintf("Error marshalling body: %v", err))
-		http.Error(w, fmt.Sprintf("Error marshalling body: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(resp)
-	if err != nil {
-		models.Log.Error(fmt.Sprintf("Error writing response: %v", err))
-	}
-}
-
-func readJSONMetrics(w http.ResponseWriter, r *http.Request) *models.Metrics {
-	var mr models.Metrics
-	var buf bytes.Buffer
-	_, err := buf.ReadFrom(r.Body)
-	defer r.Body.Close()
-
-	if err != nil {
-		models.Log.Error(fmt.Sprintf("Error reading body: %v", err))
-		http.Error(w, fmt.Sprintf("Error reading body: %v", err), http.StatusBadRequest)
-		return nil
-	}
-
-	if err := json.Unmarshal(buf.Bytes(), &mr); err != nil {
-		models.Log.Error(fmt.Sprintf("Error unmarshalling body: %v", err))
-		http.Error(w, fmt.Sprintf("Error unmarshalling body: %v", err), http.StatusBadRequest)
-		return nil
-	}
-
-	return &mr
 }
