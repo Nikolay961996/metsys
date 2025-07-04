@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
@@ -65,3 +66,7 @@ func (m *MemStorage) GetAll() []repositories.MetricDto {
 }
 
 func (m *MemStorage) Close() {}
+
+func (m *MemStorage) PingContext(_ context.Context) error {
+	return nil
+}

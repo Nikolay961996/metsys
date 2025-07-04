@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/Nikolay961996/metsys/models"
 	"os"
@@ -59,6 +60,10 @@ func (m *FileStorage) AddCounter(metricName string, value int64) {
 
 func (m *FileStorage) Close() {
 	defer m.saveTimer.Stop()
+}
+
+func (m *FileStorage) PingContext(_ context.Context) error {
+	return nil
 }
 
 func (m *FileStorage) backgroundSaver() {

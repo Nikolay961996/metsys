@@ -119,6 +119,10 @@ func (m *DBStorage) Close() {
 	defer m.db.Close()
 }
 
+func (m *DBStorage) PingContext(ctx context.Context) error {
+	return m.db.PingContext(ctx)
+}
+
 func (m *DBStorage) migrate() {
 	driver, err := postgres.WithInstance(m.db, &postgres.Config{})
 	if err != nil {

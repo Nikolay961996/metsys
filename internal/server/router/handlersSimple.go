@@ -2,7 +2,6 @@ package router
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
@@ -14,11 +13,11 @@ import (
 	"time"
 )
 
-func pingDatabase(db *sql.DB) http.HandlerFunc {
+func pingDatabase(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		if err := db.PingContext(ctx); err != nil {
+		if err := storage.PingContext(ctx); err != nil {
 			http.Error(w, "", http.StatusInternalServerError)
 			return
 		}

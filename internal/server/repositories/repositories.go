@@ -1,5 +1,7 @@
 package repositories
 
+import "context"
+
 type MetricDto struct {
 	Name  string
 	Type  string
@@ -13,4 +15,5 @@ type Storage interface {
 	GetCounter(metricName string) (int64, error)
 	GetAll() []MetricDto
 	Close()
+	PingContext(ctx context.Context) error
 }
