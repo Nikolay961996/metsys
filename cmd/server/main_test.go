@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestPositiveServer(t *testing.T) {
@@ -35,7 +36,7 @@ func TestPositiveServer(t *testing.T) {
 		{"test #5", http.MethodPost, "/update/counter/memory/-99", want{http.StatusOK}},
 		{"test #6", http.MethodPost, "/update/counter/memory/0", want{http.StatusOK}},
 	}
-	s := storage.NewFileStorage("tst", false, false)
+	s := storage.NewFileStorage("tst", 5*time.Second, false)
 	db, err := sql.Open("pgx", "host=localhost user=postgres password=admin dbname=metsys sslmode=disable")
 	if err != nil {
 		panic(err)

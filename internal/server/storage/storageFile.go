@@ -20,10 +20,10 @@ func NewFileStorage(savesFile string, savePeriod time.Duration, restore bool) *F
 		MemStorage:    NewMemStorage(),
 		savesFilePath: savesFile,
 		isSyncSave:    savePeriod == 0,
-		saveTimer:     time.NewTicker(savePeriod),
 	}
 
 	if !s.isSyncSave {
+		s.saveTimer = time.NewTicker(savePeriod)
 		go s.backgroundSaver()
 	}
 

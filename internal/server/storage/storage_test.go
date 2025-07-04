@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestStorage(t *testing.T) {
@@ -29,7 +30,7 @@ func TestStorage(t *testing.T) {
 		{"test #8", models.Counter, "", 999, 999},
 	}
 
-	s := NewFileStorage("tst", false, false)
+	s := NewFileStorage("tst", 5*time.Second, false)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -53,7 +54,7 @@ func TestStorage(t *testing.T) {
 
 func TestSyncSaveFile(t *testing.T) {
 	file := "tst.db"
-	s := NewFileStorage(file, true, false)
+	s := NewFileStorage(file, 0, false)
 	s.SetGauge("aaa", 123.4)
 	s.AddCounter("bbb", 987)
 
@@ -76,10 +77,9 @@ func TestSyncSaveFile(t *testing.T) {
 
 func TestSaveFile(t *testing.T) {
 	file := "tst.db"
-	s := NewFileStorage(file, false, false)
+	s := NewFileStorage(file, 0, false)
 	s.SetGauge("aaa", 123.4)
 	s.AddCounter("bbb", 987)
-	s.TryFlushToFile()
 
 	bytes, err := os.ReadFile(file)
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestLoadFile(t *testing.T) {
 	err = os.WriteFile(file, bytes, 0666)
 	require.NoError(t, err)
 
-	s2 := NewFileStorage(file, false, true)
+	s2 := NewFileStorage(file, 5*time.Second, true)
 	g1, err := s.GetGauge("aaa1")
 	require.NoError(t, err)
 	g2, err := s2.GetGauge("aaa1")
