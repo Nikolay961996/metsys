@@ -10,14 +10,10 @@ import (
 
 type MetricServer struct {
 	Storage repositories.Storage
-
-	config *Config
 }
 
 func InitServer(c *Config) MetricServer {
-	a := MetricServer{
-		config: c,
-	}
+	a := MetricServer{}
 
 	if c.DatabaseDSN != "" {
 		a.Storage = storage.NewDBStorage(c.DatabaseDSN)
@@ -30,8 +26,8 @@ func InitServer(c *Config) MetricServer {
 	return a
 }
 
-func (s *MetricServer) Run() {
-	err := http.ListenAndServe(s.config.RunOnServerAddress, router.MetricsRouterWithServer(s.Storage))
+func (s *MetricServer) Run(runOnServerAddress string) {
+	err := http.ListenAndServe(runOnServerAddress, router.MetricsRouterWithServer(s.Storage))
 	if err != nil {
 		models.Log.Error(err.Error())
 	}
