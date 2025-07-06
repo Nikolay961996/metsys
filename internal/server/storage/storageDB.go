@@ -19,10 +19,7 @@ type DBStorage struct {
 	db          *sql.DB
 	tx          *sql.Tx
 
-	sqlInsertOrUpdate *sql.Stmt
-	sqlGetValue       *sql.Stmt
-	sqlGetDelta       *sql.Stmt
-	sqlGetAll         *sql.Stmt
+	sqlInsertGauge *sql.Stmt
 }
 
 func NewDBStorage(databaseDSN string) *DBStorage {
@@ -40,7 +37,9 @@ func NewDBStorage(databaseDSN string) *DBStorage {
 
 func (m *DBStorage) SetGauge(metricName string, value float64) {
 	ctx := context.Background()
-	_, err := m.sqlInsertOrUpdate.ExecContext(ctx, metricName, models.Gauge, value)
+
+	_, err := m.sqlInsertGauge.ExecContext(ctx, metricName, models.Gauge, value)
+
 	if err != nil {
 		models.Log.Error(fmt.Sprintf("Failed to set for metric %s: %s", metricName, err.Error()))
 	}
@@ -49,14 +48,23 @@ func (m *DBStorage) SetGauge(metricName string, value float64) {
 func (m *DBStorage) GetGauge(metricName string) (float64, error) {
 	ctx := context.Background()
 	var value float64
-	err := m.sqlGetValue.QueryRowContext(ctx, metricName, models.Gauge).
+	err := m.db.QueryRowContext(ctx,
+		`SELECT value FROM metrics WHERE id = $1 AND type = $2`,
+		metricName, models.Gauge).
 		Scan(&value)
 	return value, err
 }
 
 func (m *DBStorage) AddCounter(metricName string, value int64) {
 	ctx := context.Background()
-	_, err := m.sqlInsertOrUpdate.ExecContext(ctx, metricName, models.Counter, value)
+	_, err := m.db.ExecContext(ctx,
+		`
+		INSERT INTO metrics (id, type, delta)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (id, type) DO UPDATE 
+		SET delta = EXCLUDED.delta + metrics.delta;`,
+		metricName, models.Counter, value)
+
 	if err != nil {
 		models.Log.Error(fmt.Sprintf("Failed to set for metric %s: %s", metricName, err.Error()))
 	}
@@ -65,15 +73,18 @@ func (m *DBStorage) AddCounter(metricName string, value int64) {
 func (m *DBStorage) GetCounter(metricName string) (int64, error) {
 	ctx := context.Background()
 	var delta int64
-	err := m.sqlGetValue.QueryRowContext(ctx, metricName, models.Gauge).
+	err := m.db.QueryRowContext(ctx,
+		`SELECT delta FROM metrics WHERE id = $1 AND type = $2`,
+		metricName, models.Counter).
 		Scan(&delta)
 	return delta, err
 }
 
 func (m *DBStorage) GetAll() []repositories.MetricDto {
 	var r []repositories.MetricDto
+
 	ctx := context.Background()
-	rows, err := m.sqlGetAll.QueryContext(ctx)
+	rows, err := m.db.QueryContext(ctx, `SELECT id, type, value, delta FROM metrics`)
 	if err != nil {
 		models.Log.Error(err.Error())
 		return r
@@ -165,7 +176,7 @@ func (m *DBStorage) open(databaseDSN string) {
 }
 
 func (m *DBStorage) prepareSql() error {
-	sqlInsertOrUpdate, err := m.db.Prepare(
+	sqlInsertGauge, err := m.db.Prepare(
 		`
 		INSERT INTO metrics (id, type, value)
 		VALUES ($1, $2, $3)
@@ -174,29 +185,7 @@ func (m *DBStorage) prepareSql() error {
 	if err != nil {
 		return err
 	}
-
-	sqlGetValue, err := m.db.Prepare(
-		`SELECT value FROM metrics WHERE id = $1 AND type = $2`)
-	if err != nil {
-		return err
-	}
-
-	sqlGetDelta, err := m.db.Prepare(
-		`SELECT delta FROM metrics WHERE id = $1 AND type = $2`)
-	if err != nil {
-		return err
-	}
-
-	sqlGetAll, err := m.db.Prepare(
-		`SELECT id, type, value, delta FROM metrics`)
-	if err != nil {
-		return err
-	}
-
-	m.sqlInsertOrUpdate = sqlInsertOrUpdate
-	m.sqlGetValue = sqlGetValue
-	m.sqlGetDelta = sqlGetDelta
-	m.sqlGetAll = sqlGetAll
+	m.sqlInsertGauge = sqlInsertGauge
 
 	return nil
 }
