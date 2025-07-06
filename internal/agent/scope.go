@@ -14,19 +14,9 @@ func Report(metrics *Metrics, serverAddress string) error {
 	client := resty.New().
 		SetTimeout(models.SendMetricTimeout)
 
-	err := sendGaugeMetrics(client, serverAddress, metrics)
-	if err != nil {
-		return err
-	}
-
-	err = sendCounterMetrics(client, serverAddress, metrics)
-	if err != nil {
-		return err
-	}
-
 	allMetrics := createMetricsArray(metrics)
 	url := fmt.Sprintf("%s/updates/", serverAddress)
-	err = sendToServer(client, url, allMetrics)
+	err := sendToServer(client, url, allMetrics)
 	if err != nil {
 		return err
 	}
@@ -92,70 +82,6 @@ func createCounterMetrics(metrics *Metrics) []models.Metrics {
 	}
 
 	return arr
-}
-
-func sendGaugeMetrics(client *resty.Client, serverAddress string, metrics *Metrics) error {
-	gauge := map[string]float64{
-		"Alloc":         metrics.Alloc,
-		"BuckHashSys":   metrics.BuckHashSys,
-		"Frees":         metrics.Frees,
-		"GCCPUFraction": metrics.GCCPUFraction,
-		"GCSys":         metrics.GCSys,
-		"HeapAlloc":     metrics.HeapAlloc,
-		"HeapIdle":      metrics.HeapIdle,
-		"HeapInuse":     metrics.HeapInuse,
-		"HeapObjects":   metrics.HeapObjects,
-		"HeapReleased":  metrics.HeapReleased,
-		"HeapSys":       metrics.HeapSys,
-		"LastGC":        metrics.LastGC,
-		"Lookups":       metrics.Lookups,
-		"MCacheInuse":   metrics.MCacheInuse,
-		"MCacheSys":     metrics.MCacheSys,
-		"MSpanInuse":    metrics.MSpanInuse,
-		"MSpanSys":      metrics.MSpanSys,
-		"Mallocs":       metrics.Mallocs,
-		"NextGC":        metrics.NextGC,
-		"NumForcedGC":   metrics.NumForcedGC,
-		"NumGC":         metrics.NumGC,
-		"OtherSys":      metrics.OtherSys,
-		"PauseTotalNs":  metrics.PauseTotalNs,
-		"StackInuse":    metrics.StackInuse,
-		"StackSys":      metrics.StackSys,
-		"Sys":           metrics.Sys,
-		"TotalAlloc":    metrics.TotalAlloc,
-		"RandomValue":   metrics.RandomValue,
-	}
-
-	for k, v := range gauge {
-		err := sendMetricJSON(client, serverAddress, models.Gauge, k, v)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func sendCounterMetrics(client *resty.Client, serverAddress string, metrics *Metrics) error {
-	counter := map[string]int64{
-		"PollCount": metrics.PollCount,
-	}
-
-	for k, v := range counter {
-		err := sendMetricJSON(client, serverAddress, models.Counter, k, v)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func sendMetricJSON(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
-	mr := createMetrics(metricType, metricName, metricValue)
-	url := fmt.Sprintf("%s/update/", serverAddress)
-	err := sendToServer(client, url, mr)
-	return err
 }
 
 func createMetrics(metricType string, metricName string, metricValue any) models.Metrics {
