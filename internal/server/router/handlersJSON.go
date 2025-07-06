@@ -2,6 +2,7 @@ package router
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -68,7 +69,8 @@ func updatesMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 			return
 		}
 
-		err := storage.StartTransaction()
+		ctx := context.Background()
+		err := storage.StartTransaction(ctx)
 		if err != nil {
 			models.Log.Error(fmt.Sprintf("Error start transaction: %v", err))
 			http.Error(w, fmt.Sprintf("Error start transaction: %v", err), http.StatusBadRequest)
