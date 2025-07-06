@@ -72,7 +72,7 @@ func (m *FileStorage) backgroundSaver() {
 	}
 }
 
-func (m *FileStorage) StartTransaction() error {
+func (m *FileStorage) StartTransaction(_ context.Context) error {
 	return nil
 }
 func (m *FileStorage) CommitTransaction() error {

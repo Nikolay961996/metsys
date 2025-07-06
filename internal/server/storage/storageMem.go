@@ -71,7 +71,7 @@ func (m *MemStorage) PingContext(_ context.Context) error {
 	return nil
 }
 
-func (m *MemStorage) StartTransaction() error {
+func (m *MemStorage) StartTransaction(_ context.Context) error {
 	return nil
 }
 func (m *MemStorage) CommitTransaction() error {
