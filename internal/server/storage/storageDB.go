@@ -125,7 +125,7 @@ func (m *DBStorage) PingContext(ctx context.Context) error {
 }
 
 func (m *DBStorage) StartTransaction(ctx context.Context) error {
-	if tx != nil {
+	if m.tx != nil {
 		return errors.New("transaction already started")
 	}
 
