@@ -24,7 +24,74 @@ func Report(metrics *Metrics, serverAddress string) error {
 		return err
 	}
 
+	allMetrics := createMetricsArray(metrics)
+	url := fmt.Sprintf("%s/updates/", serverAddress)
+	err = sendToServer(client, url, allMetrics)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func createMetricsArray(metrics *Metrics) []models.Metrics {
+	gauges := createGaugeMetrics(metrics)
+	counters := createCounterMetrics(metrics)
+
+	return append(gauges, counters...)
+}
+
+func createGaugeMetrics(metrics *Metrics) []models.Metrics {
+	gauge := map[string]float64{
+		"Alloc":         metrics.Alloc,
+		"BuckHashSys":   metrics.BuckHashSys,
+		"Frees":         metrics.Frees,
+		"GCCPUFraction": metrics.GCCPUFraction,
+		"GCSys":         metrics.GCSys,
+		"HeapAlloc":     metrics.HeapAlloc,
+		"HeapIdle":      metrics.HeapIdle,
+		"HeapInuse":     metrics.HeapInuse,
+		"HeapObjects":   metrics.HeapObjects,
+		"HeapReleased":  metrics.HeapReleased,
+		"HeapSys":       metrics.HeapSys,
+		"LastGC":        metrics.LastGC,
+		"Lookups":       metrics.Lookups,
+		"MCacheInuse":   metrics.MCacheInuse,
+		"MCacheSys":     metrics.MCacheSys,
+		"MSpanInuse":    metrics.MSpanInuse,
+		"MSpanSys":      metrics.MSpanSys,
+		"Mallocs":       metrics.Mallocs,
+		"NextGC":        metrics.NextGC,
+		"NumForcedGC":   metrics.NumForcedGC,
+		"NumGC":         metrics.NumGC,
+		"OtherSys":      metrics.OtherSys,
+		"PauseTotalNs":  metrics.PauseTotalNs,
+		"StackInuse":    metrics.StackInuse,
+		"StackSys":      metrics.StackSys,
+		"Sys":           metrics.Sys,
+		"TotalAlloc":    metrics.TotalAlloc,
+		"RandomValue":   metrics.RandomValue,
+	}
+	var arr []models.Metrics
+	for k, v := range gauge {
+		mr := createMetrics(models.Gauge, k, v)
+		arr = append(arr, mr)
+	}
+	return arr
+}
+
+func createCounterMetrics(metrics *Metrics) []models.Metrics {
+	counter := map[string]int64{
+		"PollCount": metrics.PollCount,
+	}
+
+	var arr []models.Metrics
+	for k, v := range counter {
+		mr := createMetrics(models.Counter, k, v)
+		arr = append(arr, mr)
+	}
+
+	return arr
 }
 
 func sendGaugeMetrics(client *resty.Client, serverAddress string, metrics *Metrics) error {
@@ -86,7 +153,8 @@ func sendCounterMetrics(client *resty.Client, serverAddress string, metrics *Met
 
 func sendMetricJSON(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
 	mr := createMetrics(metricType, metricName, metricValue)
-	err := sendToServer(client, serverAddress, mr)
+	url := fmt.Sprintf("%s/update/", serverAddress)
+	err := sendToServer(client, url, mr)
 	return err
 }
 
@@ -106,20 +174,19 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 	return mr
 }
 
-func sendToServer(client *resty.Client, serverAddress string, mr models.Metrics) error {
-	body, err := compressToGzip(mr)
+func sendToServer(client *resty.Client, serverUrl string, metrics any) error {
+	body, err := compressToGzip(metrics)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
 	}
-	url := fmt.Sprintf("%s/update/", serverAddress)
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(body).
-		Post(url)
+		Post(serverUrl)
 
 	if err != nil {
-		return fmt.Errorf("failed to send metric (%s). %s", mr.ID, err.Error())
+		return fmt.Errorf("failed to send metrics. %s", err.Error())
 	}
 
 	if resp.StatusCode() != http.StatusOK {
@@ -129,7 +196,7 @@ func sendToServer(client *resty.Client, serverAddress string, mr models.Metrics)
 	return nil
 }
 
-func compressToGzip(metrics models.Metrics) ([]byte, error) {
+func compressToGzip(metrics any) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	cw := gzip.NewWriter(buf)
 	d, err := json.Marshal(metrics)

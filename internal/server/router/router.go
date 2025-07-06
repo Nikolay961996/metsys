@@ -26,6 +26,8 @@ func MetricsRouterWithServer(s repositories.Storage) *chi.Mux {
 	r.Post("/value/", WithCompressionResponse(getMetricValueJSONHandler(s)))
 	r.Post("/update/", WithCompressionResponse(updateMetricJSONHandler(s)))
 
+	r.Post("/updates/", WithCompressionResponse(updatesMetricJSONHandler(s)))
+
 	r.Post("/update/*", updateErrorPathHandler())
 
 	return r

@@ -63,8 +63,7 @@ func getMetricValueHandler(storage repositories.Storage) http.HandlerFunc {
 
 func updateMetricHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Only POST method allowed", http.StatusMethodNotAllowed)
+		if !isCorrectMethod(http.MethodPost, w, r) {
 			return
 		}
 
