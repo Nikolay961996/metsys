@@ -15,6 +15,9 @@ func Report(metrics *Metrics, serverAddress string) error {
 		SetTimeout(models.SendMetricTimeout)
 
 	allMetrics := createMetricsArray(metrics)
+	if len(allMetrics) == 0 {
+		return nil
+	}
 	url := fmt.Sprintf("%s/updates/", serverAddress)
 	err := sendToServer(client, url, allMetrics)
 	if err != nil {
@@ -100,7 +103,7 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 	return mr
 }
 
-func sendToServer(client *resty.Client, serverUrl string, metrics any) error {
+func sendToServer(client *resty.Client, serverURL string, metrics any) error {
 	body, err := compressToGzip(metrics)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
@@ -109,7 +112,7 @@ func sendToServer(client *resty.Client, serverUrl string, metrics any) error {
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(body).
-		Post(serverUrl)
+		Post(serverURL)
 
 	if err != nil {
 		return fmt.Errorf("failed to send metrics. %s", err.Error())

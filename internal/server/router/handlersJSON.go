@@ -68,9 +68,24 @@ func updatesMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 			return
 		}
 
+		err := storage.StartTransaction()
+		if err != nil {
+			models.Log.Error(fmt.Sprintf("Error start transaction: %v", err))
+			http.Error(w, fmt.Sprintf("Error start transaction: %v", err), http.StatusBadRequest)
+			return
+		}
 		for _, mr := range mrs {
 			_ = updateMetrics(w, storage, &mr)
 		}
+
+		err = storage.CommitTransaction()
+
+		if err != nil {
+			models.Log.Error(fmt.Sprintf("Error commit transaction: %v", err))
+			http.Error(w, fmt.Sprintf("Error commit transaction: %v", err), http.StatusBadRequest)
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
 	}
 }

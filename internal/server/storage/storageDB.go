@@ -17,6 +17,7 @@ import (
 type DBStorage struct {
 	databaseDSN string
 	db          *sql.DB
+	tx          *sql.Tx
 }
 
 func NewDBStorage(databaseDSN string) *DBStorage {
@@ -121,6 +122,27 @@ func (m *DBStorage) Close() {
 
 func (m *DBStorage) PingContext(ctx context.Context) error {
 	return m.db.PingContext(ctx)
+}
+
+func (m *DBStorage) StartTransaction(ctx context.Context) error {
+	if tx != nil {
+		return errors.New("transaction already started")
+	}
+
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	m.tx = tx
+
+	return nil
+}
+
+func (m *DBStorage) CommitTransaction() error {
+	if m.tx != nil {
+		return m.tx.Commit()
+	}
+	return nil
 }
 
 func (m *DBStorage) migrate() {

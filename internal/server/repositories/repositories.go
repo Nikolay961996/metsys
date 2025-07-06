@@ -16,4 +16,6 @@ type Storage interface {
 	GetAll() []MetricDto
 	Close()
 	PingContext(ctx context.Context) error
+	StartTransaction() error
+	CommitTransaction() error
 }

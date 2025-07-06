@@ -72,6 +72,13 @@ func (m *FileStorage) backgroundSaver() {
 	}
 }
 
+func (m *FileStorage) StartTransaction() error {
+	return nil
+}
+func (m *FileStorage) CommitTransaction() error {
+	return nil
+}
+
 func (m *FileStorage) tryFlushToFile() {
 	models.Log.Info("Metrics try save")
 	d, err := json.MarshalIndent(m, "", "  ")

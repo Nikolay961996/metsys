@@ -70,3 +70,10 @@ func (m *MemStorage) Close() {}
 func (m *MemStorage) PingContext(_ context.Context) error {
 	return nil
 }
+
+func (m *MemStorage) StartTransaction() error {
+	return nil
+}
+func (m *MemStorage) CommitTransaction() error {
+	return nil
+}
