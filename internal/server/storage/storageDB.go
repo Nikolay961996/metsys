@@ -20,7 +20,6 @@ type DBStorage struct {
 	tx          *sql.Tx
 
 	sqlInsertOrUpdate *sql.Stmt
-	sqlInsertOrAdd    *sql.Stmt
 	sqlGetValue       *sql.Stmt
 	sqlGetDelta       *sql.Stmt
 	sqlGetAll         *sql.Stmt
@@ -31,7 +30,7 @@ func NewDBStorage(databaseDSN string) *DBStorage {
 	s.open(databaseDSN)
 	s.migrate()
 
-	err := s.prepareSQL()
+	err := s.prepareSql()
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +56,7 @@ func (m *DBStorage) GetGauge(metricName string) (float64, error) {
 
 func (m *DBStorage) AddCounter(metricName string, value int64) {
 	ctx := context.Background()
-	_, err := m.sqlInsertOrAdd.ExecContext(ctx, metricName, models.Counter, value)
+	_, err := m.sqlInsertOrUpdate.ExecContext(ctx, metricName, models.Counter, value)
 	if err != nil {
 		models.Log.Error(fmt.Sprintf("Failed to set for metric %s: %s", metricName, err.Error()))
 	}
@@ -165,23 +164,13 @@ func (m *DBStorage) open(databaseDSN string) {
 	m.db = db
 }
 
-func (m *DBStorage) prepareSQL() error {
+func (m *DBStorage) prepareSql() error {
 	sqlInsertOrUpdate, err := m.db.Prepare(
 		`
 		INSERT INTO metrics (id, type, value)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (id, type) DO UPDATE 
 		SET value = EXCLUDED.value;`)
-	if err != nil {
-		return err
-	}
-
-	sqlInsertOrAdd, err := m.db.Prepare(
-		`
-		INSERT INTO metrics (id, type, value)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (id, type) DO UPDATE 
-		SET delta = EXCLUDED.delta + metrics.delta;`)
 	if err != nil {
 		return err
 	}
@@ -205,7 +194,6 @@ func (m *DBStorage) prepareSQL() error {
 	}
 
 	m.sqlInsertOrUpdate = sqlInsertOrUpdate
-	m.sqlInsertOrAdd = sqlInsertOrAdd
 	m.sqlGetValue = sqlGetValue
 	m.sqlGetDelta = sqlGetDelta
 	m.sqlGetAll = sqlGetAll
