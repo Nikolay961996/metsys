@@ -18,6 +18,8 @@ type DBStorage struct {
 	databaseDSN string
 	db          *sql.DB
 	tx          *sql.Tx
+
+	sqlInsertGauge *sql.Stmt
 }
 
 func NewDBStorage(databaseDSN string) *DBStorage {
@@ -25,18 +27,18 @@ func NewDBStorage(databaseDSN string) *DBStorage {
 	s.open(databaseDSN)
 	s.migrate()
 
+	err := s.prepareSql()
+	if err != nil {
+		panic(err)
+	}
+
 	return &s
 }
 
 func (m *DBStorage) SetGauge(metricName string, value float64) {
 	ctx := context.Background()
-	_, err := m.db.ExecContext(ctx,
-		`
-		INSERT INTO metrics (id, type, value)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (id, type) DO UPDATE 
-		SET value = EXCLUDED.value;`,
-		metricName, models.Gauge, value)
+
+	_, err := m.sqlInsertGauge.ExecContext(ctx, metricName, models.Gauge, value)
 
 	if err != nil {
 		models.Log.Error(fmt.Sprintf("Failed to set for metric %s: %s", metricName, err.Error()))
@@ -171,4 +173,19 @@ func (m *DBStorage) open(databaseDSN string) {
 	}
 	m.databaseDSN = databaseDSN
 	m.db = db
+}
+
+func (m *DBStorage) prepareSql() error {
+	sqlInsertGauge, err := m.db.Prepare(
+		`
+		INSERT INTO metrics (id, type, value)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (id, type) DO UPDATE 
+		SET value = EXCLUDED.value;`)
+	if err != nil {
+		return err
+	}
+	m.sqlInsertGauge = sqlInsertGauge
+
+	return nil
 }
