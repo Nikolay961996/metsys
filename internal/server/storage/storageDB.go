@@ -18,6 +18,8 @@ type DBStorage struct {
 	databaseDSN string
 	db          *sql.DB
 	tx          *sql.Tx
+
+	sql1 *sql.Stmt
 }
 
 func NewDBStorage(databaseDSN string) *DBStorage {
@@ -25,17 +27,24 @@ func NewDBStorage(databaseDSN string) *DBStorage {
 	s.open(databaseDSN)
 	s.migrate()
 
+	sql1, err := s.db.Prepare(
+		`
+		INSERT INTO metrics (id, type, value)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (id, type) DO UPDATE 
+		SET value = EXCLUDED.value;`)
+	if err != nil {
+		panic(err)
+	}
+	s.sql1 = sql1
+
 	return &s
 }
 
 func (m *DBStorage) SetGauge(metricName string, value float64) {
 	ctx := context.Background()
-	_, err := m.db.ExecContext(ctx,
-		`
-		INSERT INTO metrics (id, type, value)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (id, type) DO UPDATE 
-		SET value = EXCLUDED.value;`,
+
+	_, err := m.sql1.ExecContext(ctx,
 		metricName, models.Gauge, value)
 
 	if err != nil {
