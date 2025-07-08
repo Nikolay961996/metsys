@@ -123,6 +123,8 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 }
 
 func sendToServer(client *resty.Client, serverURL string, metrics any) error {
+	models.Log.Info("Sending metrics to " + serverURL)
+	models.Log.Info("data: " + fmt.Sprintf("%v", metrics))
 	body, err := compressToGzip(metrics)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())

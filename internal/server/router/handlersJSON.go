@@ -60,6 +60,7 @@ func updateMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 
 func updatesMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		models.Log.Info("Get batch metrics")
 		w.Header().Set("content-type", "application/json; charset=utf-8")
 		if !isCorrectMethod(http.MethodPost, w, r) {
 			return
@@ -68,6 +69,7 @@ func updatesMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 		if mrs == nil {
 			return
 		}
+		models.Log.Info(fmt.Sprintf("Batch: %v", mrs))
 
 		ctx := context.Background()
 		err := storage.StartTransaction(ctx)
