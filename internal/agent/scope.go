@@ -14,12 +14,12 @@ func Report(metrics *Metrics, serverAddress string) error {
 	client := resty.New().
 		SetTimeout(models.SendMetricTimeout)
 
-	err := sendGaugeMetrics(client, serverAddress, metrics)
-	if err != nil {
-		return err
+	allMetrics := createMetricsArray(metrics)
+	if len(allMetrics) == 0 {
+		return nil
 	}
-
-	err = sendCounterMetrics(client, serverAddress, metrics)
+	url := fmt.Sprintf("%s/updates/", serverAddress)
+	err := sendToServer(client, url, allMetrics)
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,14 @@ func Report(metrics *Metrics, serverAddress string) error {
 	return nil
 }
 
-func sendGaugeMetrics(client *resty.Client, serverAddress string, metrics *Metrics) error {
+func createMetricsArray(metrics *Metrics) []models.Metrics {
+	gauges := createGaugeMetrics(metrics)
+	counters := createCounterMetrics(metrics)
+
+	return append(gauges, counters...)
+}
+
+func createGaugeMetrics(metrics *Metrics) []models.Metrics {
 	gauge := map[string]float64{
 		"Alloc":         metrics.Alloc,
 		"BuckHashSys":   metrics.BuckHashSys,
@@ -58,33 +65,29 @@ func sendGaugeMetrics(client *resty.Client, serverAddress string, metrics *Metri
 		"TotalAlloc":    metrics.TotalAlloc,
 		"RandomValue":   metrics.RandomValue,
 	}
-
+	var arr []models.Metrics
 	for k, v := range gauge {
-		err := sendMetricJSON(client, serverAddress, models.Gauge, k, v)
-		if err != nil {
-			return err
-		}
+		mr := createMetrics(models.Gauge, k, v)
+		arr = append(arr, mr)
 	}
-
-	return nil
+	return arr
 }
 
-func sendCounterMetrics(client *resty.Client, serverAddress string, metrics *Metrics) error {
+func createCounterMetrics(metrics *Metrics) []models.Metrics {
 	counter := map[string]int64{
 		"PollCount": metrics.PollCount,
 	}
 
+	var arr []models.Metrics
 	for k, v := range counter {
-		err := sendMetricJSON(client, serverAddress, models.Counter, k, v)
-		if err != nil {
-			return err
-		}
+		mr := createMetrics(models.Counter, k, v)
+		arr = append(arr, mr)
 	}
 
-	return nil
+	return arr
 }
 
-func sendMetricJSON(client *resty.Client, serverAddress string, metricType string, metricName string, metricValue any) error {
+func createMetrics(metricType string, metricName string, metricValue any) models.Metrics {
 	mr := models.Metrics{
 		ID:    metricName,
 		MType: metricType,
@@ -97,28 +100,32 @@ func sendMetricJSON(client *resty.Client, serverAddress string, metricType strin
 		mr.Delta = &v
 	}
 
-	body, err := compressToGzip(mr)
+	return mr
+}
+
+func sendToServer(client *resty.Client, serverURL string, metrics any) error {
+	body, err := compressToGzip(metrics)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
 	}
-	url := fmt.Sprintf("%s/update/", serverAddress)
 	resp, err := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetBody(body).
-		Post(url)
+		Post(serverURL)
 
 	if err != nil {
-		return fmt.Errorf("failed to send metric (%s) = %v. %s", metricName, metricValue, err.Error())
+		return fmt.Errorf("failed to send metrics. %s", err.Error())
 	}
 
 	if resp.StatusCode() != http.StatusOK {
 		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode())
 	}
+
 	return nil
 }
 
-func compressToGzip(metrics models.Metrics) ([]byte, error) {
+func compressToGzip(metrics any) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	cw := gzip.NewWriter(buf)
 	d, err := json.Marshal(metrics)

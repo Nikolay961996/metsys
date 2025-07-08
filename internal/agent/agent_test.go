@@ -60,11 +60,29 @@ func TestSendRequest(t *testing.T) {
 	r.Post("/update/", func(w http.ResponseWriter, r *http.Request) {
 		metricServerTestHandler(r, t, &metrics)
 	})
+	r.Post("/updates/", func(w http.ResponseWriter, r *http.Request) {
+		metricBatchServerTestHandler(r, t, &metrics)
+	})
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	err := Report(&metrics, ts.URL)
 	assert.NoError(t, err)
+}
+
+func metricBatchServerTestHandler(r *http.Request, t *testing.T, metrics *Metrics) {
+	var mr []models.Metrics
+	var buf bytes.Buffer
+
+	_, err := buf.ReadFrom(r.Body)
+	defer r.Body.Close()
+	require.NoError(t, err)
+	err = json.Unmarshal(buf.Bytes(), &mr)
+	require.NoError(t, err)
+
+	for _, m := range mr {
+		checkMetric(t, metrics, &m)
+	}
 }
 
 func metricServerTestHandler(r *http.Request, t *testing.T, metrics *Metrics) {
@@ -77,6 +95,10 @@ func metricServerTestHandler(r *http.Request, t *testing.T, metrics *Metrics) {
 	err = json.Unmarshal(buf.Bytes(), &mr)
 	require.NoError(t, err)
 
+	checkMetric(t, metrics, &mr)
+}
+
+func checkMetric(t *testing.T, metrics *Metrics, mr *models.Metrics) {
 	switch mr.MType {
 	case models.Gauge:
 		v := *mr.Value
