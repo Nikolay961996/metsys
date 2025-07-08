@@ -8,9 +8,18 @@ import (
 	"fmt"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/go-resty/resty/v2"
+	"io"
 	"net"
 	"net/http"
 )
+
+type HTTPStatusError struct {
+	StatusCode int
+}
+
+func (e *HTTPStatusError) Error() string {
+	return fmt.Sprintf("HTTP error: status %d", e.StatusCode)
+}
 
 func Report(metrics *Metrics, serverAddress string) error {
 	client := resty.New().
@@ -27,7 +36,8 @@ func Report(metrics *Metrics, serverAddress string) error {
 			return sendToServer(client, url, allMetrics)
 		}, func(err error) bool {
 			var netErr net.Error
-			return errors.As(err, &netErr)
+			var netStatusErr *HTTPStatusError
+			return errors.As(err, &netErr) || errors.As(err, &netStatusErr) || errors.Is(err, io.EOF)
 		})
 	if err != nil {
 		return err
@@ -128,7 +138,7 @@ func sendToServer(client *resty.Client, serverURL string, metrics any) error {
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return fmt.Errorf("failed status to send metrics: %d", resp.StatusCode())
+		return &HTTPStatusError{resp.StatusCode()}
 	}
 
 	return nil
