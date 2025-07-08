@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/Nikolay961996/metsys/models"
 	"github.com/go-resty/resty/v2"
+	"net"
 	"net/http"
 )
 
@@ -19,7 +21,14 @@ func Report(metrics *Metrics, serverAddress string) error {
 		return nil
 	}
 	url := fmt.Sprintf("%s/updates/", serverAddress)
-	err := sendToServer(client, url, allMetrics)
+
+	err := models.RetryerCon(
+		func() error {
+			return sendToServer(client, url, allMetrics)
+		}, func(err error) bool {
+			var netErr net.Error
+			return errors.As(err, &netErr)
+		})
 	if err != nil {
 		return err
 	}

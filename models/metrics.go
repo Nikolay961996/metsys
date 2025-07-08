@@ -16,6 +16,7 @@ var (
 
 const (
 	SendMetricTimeout = 5 * time.Second
+	MaxErrRetryCount  = 4
 )
 
 // NOTE: Не усложняем пример, вводя иерархическую вложенность структур.

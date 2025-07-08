@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/Nikolay961996/metsys/models"
 	"os"
 	"time"
@@ -81,15 +82,27 @@ func (m *FileStorage) CommitTransaction() error {
 
 func (m *FileStorage) tryFlushToFile() {
 	models.Log.Info("Metrics try save")
-	d, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		models.Log.Error(err.Error())
-		return
+
+	flushFunc := func() error {
+		d, err := json.MarshalIndent(m, "", "  ")
+		if err != nil {
+			return fmt.Errorf("json marshal error: %w", err)
+		}
+
+		err = os.WriteFile(m.savesFilePath, d, 0666)
+		if err != nil {
+			return fmt.Errorf("write file error: %w", err)
+		}
+		return nil
 	}
-	err = os.WriteFile(m.savesFilePath, d, 0666)
+
+	err := models.Retryer(
+		flushFunc,
+		os.ErrPermission,
+	)
 	if err != nil {
-		models.Log.Error(err.Error())
-		return
+		models.Log.Error("Failed to save metrics after retries: " + err.Error())
+	} else {
+		models.Log.Info("Save success")
 	}
-	models.Log.Info("Save success")
 }

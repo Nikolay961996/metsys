@@ -10,7 +10,10 @@ import (
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/postgres"
 	_ "github.com/golang-migrate/migrate/source/file"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"net"
 	"strconv"
 )
 
@@ -37,7 +40,10 @@ func NewDBStorage(databaseDSN string) *DBStorage {
 
 func (m *DBStorage) SetGauge(metricName string, value float64) {
 	ctx := context.Background()
-	_, err := m.sqlInsertOrUpdateGauge.ExecContext(ctx, metricName, value)
+	err := models.RetryerCon(func() error {
+		_, err := m.sqlInsertOrUpdateGauge.ExecContext(ctx, metricName, value)
+		return err
+	}, shouldRetryDBError)
 	if err != nil {
 		models.Log.Error(fmt.Sprintf("Failed to set for metric %s: %s", metricName, err.Error()))
 	}
@@ -46,14 +52,18 @@ func (m *DBStorage) SetGauge(metricName string, value float64) {
 func (m *DBStorage) GetGauge(metricName string) (float64, error) {
 	ctx := context.Background()
 	var value float64
-	err := m.sqlGetGauge.QueryRowContext(ctx, metricName).
-		Scan(&value)
+	err := models.RetryerCon(func() error {
+		return m.sqlGetGauge.QueryRowContext(ctx, metricName).Scan(&value)
+	}, shouldRetryDBError)
 	return value, err
 }
 
 func (m *DBStorage) AddCounter(metricName string, value int64) {
 	ctx := context.Background()
-	_, err := m.sqlInsertOrUpdateCounter.ExecContext(ctx, metricName, value)
+	err := models.RetryerCon(func() error {
+		_, err := m.sqlInsertOrUpdateCounter.ExecContext(ctx, metricName, value)
+		return err
+	}, shouldRetryDBError)
 	if err != nil {
 		models.Log.Error(fmt.Sprintf("failed to set for metric %s: %s", metricName, err.Error()))
 	}
@@ -62,16 +72,24 @@ func (m *DBStorage) AddCounter(metricName string, value int64) {
 func (m *DBStorage) GetCounter(metricName string) (int64, error) {
 	ctx := context.Background()
 	var delta int64
-	err := m.sqlGetCounter.QueryRowContext(ctx, metricName).
-		Scan(&delta)
+	err := models.RetryerCon(func() error {
+		return m.sqlGetCounter.QueryRowContext(ctx, metricName).Scan(&delta)
+	}, shouldRetryDBError)
 	return delta, err
 }
 
 func (m *DBStorage) GetAll() []repositories.MetricDto {
 	var r []repositories.MetricDto
-
 	ctx := context.Background()
-	rows, err := m.sqlGetAll.QueryContext(ctx)
+	var rows *sql.Rows
+	err := models.RetryerCon(func() error {
+		rs, err := m.sqlGetAll.QueryContext(ctx)
+		if err != nil {
+			rows = rs
+		}
+		return err
+	}, shouldRetryDBError)
+
 	if err != nil {
 		models.Log.Error(err.Error())
 		return r
@@ -135,31 +153,46 @@ func (m *DBStorage) CommitTransaction() error {
 }
 
 func (m *DBStorage) migrate() {
-	driver, err := postgres.WithInstance(m.db, &postgres.Config{})
-	if err != nil {
-		models.Log.Fatal(fmt.Sprintf("migration driver creation error: %s", err.Error()))
-		panic(err)
+	migrateFunc := func() error {
+		driver, err := postgres.WithInstance(m.db, &postgres.Config{})
+		if err != nil {
+			models.Log.Fatal(fmt.Sprintf("migration driver creation error: %s", err.Error()))
+			return err
+		}
+
+		instance, err := migrate.NewWithDatabaseInstance("file://internal/server/migrations", m.databaseDSN, driver)
+		if err != nil {
+			models.Log.Fatal(fmt.Sprintf("migration instance creation error: %s", err.Error()))
+			return err
+		}
+
+		if err := instance.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+			models.Log.Fatal(fmt.Sprintf("migration instance up error: %s", err.Error()))
+			return err
+		}
+		return nil
 	}
 
-	instance, err := migrate.NewWithDatabaseInstance("file://internal/server/migrations", m.databaseDSN, driver)
+	err := models.RetryerCon(migrateFunc, shouldRetryDBError)
 	if err != nil {
-		models.Log.Fatal(fmt.Sprintf("migration instance creation error: %s", err.Error()))
-		panic(err)
-	}
-
-	if err := instance.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		models.Log.Fatal(fmt.Sprintf("migration instance up error: %s", err.Error()))
 		panic(err)
 	}
 }
 
 func (m *DBStorage) open(databaseDSN string) {
-	db, err := sql.Open("pgx", databaseDSN)
+	err := models.RetryerCon(
+		func() error {
+			db, err := sql.Open("pgx", databaseDSN)
+			if err == nil {
+				m.db = db
+			}
+			return err
+		}, shouldRetryDBError)
+
 	if err != nil {
 		panic(err)
 	}
 	m.databaseDSN = databaseDSN
-	m.db = db
 }
 
 func (m *DBStorage) prepareSQL() {
@@ -203,4 +236,25 @@ func (m *DBStorage) prepareSQL() {
 	m.sqlGetGauge = sqlGetGauge
 	m.sqlGetCounter = sqlGetCounter
 	m.sqlGetAll = sqlGetAll
+}
+
+func shouldRetryDBError(err error) bool {
+	var netErr net.Error
+	if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
+		return true
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case pgerrcode.AdminShutdown, // Сервер закрывает соединение
+			pgerrcode.CannotConnectNow,     // Сервер не принимает подключения
+			pgerrcode.TooManyConnections,   // Слишком много подключений
+			pgerrcode.ConnectionException,  // Обрыв соединения
+			pgerrcode.SerializationFailure: // Конфликт транзакций
+			return true
+		}
+	}
+
+	return false
 }
