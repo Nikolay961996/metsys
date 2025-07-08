@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -9,6 +10,7 @@ func Retryer(f func() error, retryableError ...error) error {
 	// 1.2...3.....4x
 	tryStep := 1
 	for tryStep <= MaxErrRetryCount {
+		fmt.Println("retry ", tryStep)
 		err := f()
 		if err == nil {
 			return nil
@@ -38,6 +40,7 @@ func RetryerCon(f func() error, isRetryable func(error) bool) error {
 	// 1.2...3.....4x
 	tryStep := 1
 	for tryStep <= MaxErrRetryCount {
+		fmt.Println("retryCon ", tryStep)
 		err := f()
 		if err == nil {
 			return nil
