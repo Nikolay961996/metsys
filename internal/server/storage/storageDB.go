@@ -55,7 +55,7 @@ func (m *DBStorage) AddCounter(metricName string, value int64) {
 	ctx := context.Background()
 	_, err := m.sqlInsertOrUpdateCounter.ExecContext(ctx, metricName, value)
 	if err != nil {
-		models.Log.Error(fmt.Sprintf("Failed to set for metric %s: %s", metricName, err.Error()))
+		models.Log.Error(fmt.Sprintf("failed to set for metric %s: %s", metricName, err.Error()))
 	}
 }
 
