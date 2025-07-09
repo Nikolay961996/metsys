@@ -15,7 +15,7 @@ var (
 )
 
 const (
-	SendMetricTimeout = 5 * time.Second
+	SendMetricTimeout = 20 * time.Second
 	MaxErrRetryCount  = 4
 )
 
