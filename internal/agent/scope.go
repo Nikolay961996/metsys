@@ -29,17 +29,7 @@ func Report(metrics *Metrics, serverAddress string) error {
 		return nil
 	}
 	url := fmt.Sprintf("%s/updates/", serverAddress)
-
-	err := models.RetryerCon(
-		func() error {
-			models.Log.Warn("Next retry...")
-			return sendToServer(client, url, allMetrics)
-		}, func(err error) bool {
-			models.Log.Warn(fmt.Sprintf("Retry error: %s", err.Error()))
-			var netErr net.Error
-			var netStatusErr *HTTPStatusError
-			return errors.As(err, &netErr) || errors.As(err, &netStatusErr) || errors.Is(err, io.EOF)
-		})
+	err := sendToServer(client, url, allMetrics)
 	if err != nil {
 		return err
 	}
@@ -130,12 +120,25 @@ func sendToServer(client *resty.Client, serverURL string, metrics any) error {
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
 	}
-	resp, err := client.R().
+
+	request := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetBody(body).
-		Post(serverURL)
-
+		SetBody(body)
+	var resp *resty.Response
+	err = models.RetryerCon(
+		func() error {
+			r, e := request.Post(serverURL)
+			if e != nil {
+				resp = r
+			}
+			return e
+		}, func(err error) bool {
+			models.Log.Warn(fmt.Sprintf("Retry error: %s", err.Error()))
+			var netErr net.Error
+			var netStatusErr *HTTPStatusError
+			return errors.As(err, &netErr) || errors.As(err, &netStatusErr) || errors.Is(err, io.EOF)
+		})
 	if err != nil {
 		return fmt.Errorf("failed to send metrics. %s", err.Error())
 	}
