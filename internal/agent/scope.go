@@ -130,6 +130,9 @@ func sendToServer(client *resty.Client, serverURL string, metrics any) error {
 		func() error {
 			r, e := request.Post(serverURL)
 			if e == nil {
+				if r.StatusCode() != http.StatusOK {
+					return &HTTPStatusError{StatusCode: r.StatusCode()}
+				}
 				resp = r
 			}
 			return e
