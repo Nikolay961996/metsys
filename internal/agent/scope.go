@@ -33,8 +33,10 @@ func Report(metrics *Metrics, serverAddress string) error {
 
 	err := models.RetryerCon(
 		func() error {
+			models.Log.Warn("Next retry...")
 			return sendToServer(client, url, allMetrics)
 		}, func(err error) bool {
+			models.Log.Warn(fmt.Sprintf("Retry error: %s", err.Error()))
 			var netErr net.Error
 			var netStatusErr *HTTPStatusError
 			return errors.As(err, &netErr) || errors.As(err, &netStatusErr) || errors.Is(err, io.EOF)
