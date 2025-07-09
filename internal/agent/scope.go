@@ -22,8 +22,7 @@ func (e *HTTPStatusError) Error() string {
 }
 
 func Report(metrics *Metrics, serverAddress string) error {
-	client := resty.New().
-		SetTimeout(models.SendMetricTimeout)
+	client := resty.New()
 
 	allMetrics := createMetricsArray(metrics)
 	if len(allMetrics) == 0 {
