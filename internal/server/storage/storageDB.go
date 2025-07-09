@@ -83,14 +83,9 @@ func (m *DBStorage) GetAll() []repositories.MetricDto {
 	ctx := context.Background()
 	var rows *sql.Rows
 
-	// static test want this dump check
-	if rows != nil && rows.Err() != nil {
-		return r
-	}
-
 	err := models.RetryerCon(func() error {
 		rs, err := m.sqlGetAll.QueryContext(ctx)
-		if err != nil {
+		if err != nil && rs.Err() != nil {
 			rows = rs
 		}
 		return err
