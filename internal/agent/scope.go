@@ -129,7 +129,7 @@ func sendToServer(client *resty.Client, serverURL string, metrics any) error {
 	err = models.RetryerCon(
 		func() error {
 			r, e := request.Post(serverURL)
-			if e != nil {
+			if e == nil {
 				resp = r
 			}
 			return e
