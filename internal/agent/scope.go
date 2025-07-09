@@ -1,8 +1,6 @@
 package agent
 
 import (
-	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -116,14 +114,15 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 func sendToServer(client *resty.Client, serverURL string, metrics any) error {
 	models.Log.Info("Sending metrics to " + serverURL)
 	models.Log.Info("data: " + fmt.Sprintf("%v", metrics))
-	body, err := compressToGzip(metrics)
+	//body, err := compressToGzip(metrics)
+	body, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
 	}
 
 	request := client.R().
 		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip").
+		//SetHeader("Content-Encoding", "gzip").
 		SetBody(body)
 	var resp *resty.Response
 	err = models.RetryerCon(
@@ -153,20 +152,20 @@ func sendToServer(client *resty.Client, serverURL string, metrics any) error {
 	return nil
 }
 
-func compressToGzip(metrics any) ([]byte, error) {
-	buf := bytes.NewBuffer(nil)
-	cw := gzip.NewWriter(buf)
-	d, err := json.Marshal(metrics)
-	if err != nil {
-		return nil, fmt.Errorf("error json marshaling: %s", err.Error())
-	}
-
-	if _, err := cw.Write(d); err != nil {
-		return nil, fmt.Errorf("error json write: %s", err.Error())
-	}
-	if err := cw.Close(); err != nil {
-		return nil, fmt.Errorf("error closing gzip writer: %s", err.Error())
-	}
-
-	return buf.Bytes(), nil
-}
+//func compressToGzip(metrics any) ([]byte, error) {
+//	buf := bytes.NewBuffer(nil)
+//	cw := gzip.NewWriter(buf)
+//	d, err := json.Marshal(metrics)
+//	if err != nil {
+//		return nil, fmt.Errorf("error json marshaling: %s", err.Error())
+//	}
+//
+//	if _, err := cw.Write(d); err != nil {
+//		return nil, fmt.Errorf("error json write: %s", err.Error())
+//	}
+//	if err := cw.Close(); err != nil {
+//		return nil, fmt.Errorf("error closing gzip writer: %s", err.Error())
+//	}
+//
+//	return buf.Bytes(), nil
+//}
