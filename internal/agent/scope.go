@@ -26,10 +26,13 @@ func Report(metrics *Metrics, serverAddress string) error {
 	if len(allMetrics) == 0 {
 		return nil
 	}
-	url := fmt.Sprintf("%s/updates/", serverAddress)
-	err := sendToServer(client, url, allMetrics)
-	if err != nil {
-		return err
+	url := fmt.Sprintf("%s/update/", serverAddress)
+
+	for _, m := range allMetrics {
+		err := sendToServer(client, url, &m)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -111,7 +114,7 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 	return mr
 }
 
-func sendToServer(client *resty.Client, serverURL string, metrics any) error {
+func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics) error {
 	models.Log.Info("Sending metrics to " + serverURL)
 	models.Log.Info("data: " + fmt.Sprintf("%v", metrics))
 	//body, err := compressToGzip(metrics)
