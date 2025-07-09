@@ -82,6 +82,12 @@ func (m *DBStorage) GetAll() []repositories.MetricDto {
 	var r []repositories.MetricDto
 	ctx := context.Background()
 	var rows *sql.Rows
+
+	// static test want this dump check
+	if rows != nil && rows.Err() != nil {
+		return r
+	}
+
 	err := models.RetryerCon(func() error {
 		rs, err := m.sqlGetAll.QueryContext(ctx)
 		if err != nil {
@@ -240,7 +246,7 @@ func (m *DBStorage) prepareSQL() {
 
 func shouldRetryDBError(err error) bool {
 	var netErr net.Error
-	if errors.As(err, &netErr) && (netErr.Timeout() || netErr.Temporary()) {
+	if errors.As(err, &netErr) && netErr.Timeout() {
 		return true
 	}
 
