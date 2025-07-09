@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestPositiveServer(t *testing.T) {
@@ -34,7 +35,8 @@ func TestPositiveServer(t *testing.T) {
 		{"test #5", http.MethodPost, "/update/counter/memory/-99", want{http.StatusOK}},
 		{"test #6", http.MethodPost, "/update/counter/memory/0", want{http.StatusOK}},
 	}
-	s := storage.NewMemStorage("tst", false, false)
+	s := storage.NewFileStorage("tst", 5*time.Second, false)
+
 	ts := httptest.NewServer(router.MetricsRouterWithServer(s))
 	defer ts.Close()
 
@@ -89,7 +91,7 @@ func TestNegativeServer(t *testing.T) {
 		{"test #8", http.MethodPost, "/update///", "text/plain", want{http.StatusNotFound}},
 	}
 
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouterTest())
 	defer ts.Close()
 
 	for _, tt := range tests {
@@ -128,7 +130,7 @@ func TestServer(t *testing.T) {
 		{"test #9", http.MethodPost, "/update///", want{http.StatusNotFound}},
 	}
 
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouterTest())
 	defer ts.Close()
 
 	for _, tt := range tests {
@@ -168,7 +170,7 @@ func TestGetMetric(t *testing.T) {
 		{"test #10", http.MethodGet, "/value/counter/cp", want{http.StatusOK, "223"}},
 	}
 
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouterTest())
 	defer ts.Close()
 
 	for _, tt := range tests {
@@ -213,7 +215,7 @@ func TestJSONSupport(t *testing.T) {
 		{"test #6", http.MethodPost, "/value/", models.Metrics{ID: "cp", MType: models.Counter}, 0, 0, want{http.StatusOK, 0, 223}},
 	}
 
-	ts := httptest.NewServer(router.MetricsRouter())
+	ts := httptest.NewServer(router.MetricsRouterTest())
 	defer ts.Close()
 
 	for _, tt := range tests {
