@@ -3,6 +3,9 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,7 +24,7 @@ func (e *HTTPStatusError) Error() string {
 	return fmt.Sprintf("HTTP error: status %d", e.StatusCode)
 }
 
-func Report(metrics *Metrics, serverAddress string) error {
+func Report(metrics *Metrics, serverAddress string, keyForSigning string) error {
 	client := resty.New()
 
 	allMetrics := createMetricsArray(metrics)
@@ -31,7 +34,7 @@ func Report(metrics *Metrics, serverAddress string) error {
 	url := fmt.Sprintf("%s/update/", serverAddress)
 
 	for _, m := range allMetrics {
-		err := sendToServer(client, url, &m)
+		err := sendToServer(client, url, &m, keyForSigning)
 		if err != nil {
 			return err
 		}
@@ -116,10 +119,23 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 	return mr
 }
 
-func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics) error {
+func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics, keyForSigning string) error {
 	models.Log.Info("Sending metrics to " + serverURL)
 	models.Log.Info("data: " + fmt.Sprintf("%v", metrics))
-	body, err := compressToGzip(metrics)
+
+	jsonData, err := json.Marshal(metrics)
+	if err != nil {
+		return fmt.Errorf("error marshaling metrics: %s", err.Error())
+	}
+
+	var sign []byte
+	if keyForSigning != "" {
+		h := hmac.New(sha256.New, []byte(keyForSigning))
+		h.Write(jsonData)
+		sign = h.Sum(nil)
+	}
+
+	compressedBody, err := compressToGzip(jsonData)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
 	}
@@ -127,7 +143,12 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 	request := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetBody(body)
+		SetBody(compressedBody)
+
+	if len(sign) > 0 {
+		request.SetHeader("HashSHA256", hex.EncodeToString(sign))
+	}
+
 	var resp *resty.Response
 	err = models.RetryerCon(
 		func() error {
@@ -156,15 +177,11 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 	return nil
 }
 
-func compressToGzip(metrics any) ([]byte, error) {
+func compressToGzip(metrics []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	cw := gzip.NewWriter(buf)
-	d, err := json.Marshal(metrics)
-	if err != nil {
-		return nil, fmt.Errorf("error json marshaling: %s", err.Error())
-	}
 
-	if _, err := cw.Write(d); err != nil {
+	if _, err := cw.Write(metrics); err != nil {
 		return nil, fmt.Errorf("error json write: %s", err.Error())
 	}
 	if err := cw.Close(); err != nil {

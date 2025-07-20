@@ -28,7 +28,7 @@ func (a *Entity) Run() {
 			Poll(&a.metrics)
 			fmt.Println("Metrics poll")
 		case <-a.reportTicker.C:
-			err := Report(&a.metrics, a.config.SendToServerAddress)
+			err := Report(&a.metrics, a.config.SendToServerAddress, a.config.KeyForSigning)
 			if err != nil {
 				fmt.Println("Error while reporting: ", err)
 			} else {

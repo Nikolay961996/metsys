@@ -13,6 +13,7 @@ type Config struct {
 	SendToServerAddress string
 	PollInterval        time.Duration
 	ReportInterval      time.Duration
+	KeyForSigning       string
 }
 
 func DefaultConfig() Config {
@@ -20,6 +21,7 @@ func DefaultConfig() Config {
 		SendToServerAddress: "http://localhost:8080",
 		PollInterval:        2 * time.Second,
 		ReportInterval:      10 * time.Second,
+		KeyForSigning:       "",
 	}
 }
 
@@ -33,6 +35,7 @@ func (c *Config) flags() {
 	flag.StringVar(&c.SendToServerAddress, "a", "http://localhost:8080", "Metsys server address ip:port")
 	r := flag.Int("r", 10, "ReportInterval in seconds")
 	p := flag.Int("p", 2, "PollInterval in seconds")
+	k := flag.String("k", "", "Key for signing")
 	flag.Parse()
 
 	if flag.NArg() > 0 {
@@ -43,6 +46,7 @@ func (c *Config) flags() {
 	c.SendToServerAddress = c.fixProtocolPrefixAddress(c.SendToServerAddress)
 	c.ReportInterval = time.Duration(*r) * time.Second
 	c.PollInterval = time.Duration(*p) * time.Second
+	c.KeyForSigning = *k
 }
 
 func (c *Config) envs() {
@@ -50,6 +54,7 @@ func (c *Config) envs() {
 		Address        string `env:"ADDRESS"`
 		ReportInterval int    `env:"REPORT_INTERVAL"`
 		PollInterval   int    `env:"POLL_INTERVAL"`
+		KeyForSigning  string `env:"KEY"`
 	}
 	err := env.Parse(&configEnv)
 	if err != nil {
@@ -64,6 +69,9 @@ func (c *Config) envs() {
 	}
 	if configEnv.PollInterval != 0 {
 		c.PollInterval = time.Duration(configEnv.PollInterval) * time.Second
+	}
+	if configEnv.KeyForSigning != "" {
+		c.KeyForSigning = configEnv.KeyForSigning
 	}
 }
 

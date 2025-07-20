@@ -66,7 +66,7 @@ func TestSendRequest(t *testing.T) {
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
-	err := Report(&metrics, ts.URL)
+	err := Report(&metrics, ts.URL, "")
 	assert.NoError(t, err)
 }
 
