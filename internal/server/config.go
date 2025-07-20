@@ -15,14 +15,16 @@ type Config struct {
 	StoreInterval      time.Duration
 	FileStoragePath    string
 	Restore            bool
+	DatabaseDSN        string
 }
 
 func DefaultConfig() Config {
 	return Config{
 		RunOnServerAddress: "localhost:8080",
 		StoreInterval:      300 * time.Second,
-		FileStoragePath:    "/metsys.db",
+		FileStoragePath:    "",
 		Restore:            false,
+		DatabaseDSN:        "",
 	}
 }
 
@@ -39,6 +41,7 @@ func (c *Config) flags() {
 	i := flag.Int("i", 300, "period for local saving. 0 - sync save")
 	flag.StringVar(&c.FileStoragePath, "f", c.FileStoragePath, "path to file for saves")
 	flag.BoolVar(&c.Restore, "r", c.Restore, "restore save on start")
+	flag.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "database connection string")
 
 	flag.Parse()
 
@@ -56,6 +59,7 @@ func (c *Config) envs() {
 		StoreInterval   int    `env:"STORE_INTERVAL"`
 		FileStoragePath string `env:"FILE_STORAGE_PATH"`
 		Restore         *bool  `env:"RESTORE"`
+		DatabaseDSN     string `env:"DATABASE_DSN"`
 	}
 	err := env.Parse(&configEnv)
 	if err != nil {
@@ -73,5 +77,8 @@ func (c *Config) envs() {
 	}
 	if configEnv.Restore != nil {
 		c.Restore = *configEnv.Restore
+	}
+	if configEnv.DatabaseDSN != "" {
+		c.DatabaseDSN = configEnv.DatabaseDSN
 	}
 }
