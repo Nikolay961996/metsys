@@ -37,6 +37,20 @@ func createMetricsArray(metrics *Metrics) []models.Metrics {
 	return append(gauges, counters...)
 }
 
+func createGopsutilMetricsArray(metrics *MetricsGopsutil) []models.Metrics {
+	gauge := map[string]float64{
+		"TotalMemory":     metrics.TotalMemory,
+		"FreeMemory":      metrics.FreeMemory,
+		"CPUutilization1": metrics.CPUutilization1,
+	}
+	var arr []models.Metrics
+	for k, v := range gauge {
+		mr := createMetrics(models.Gauge, k, v)
+		arr = append(arr, mr)
+	}
+	return arr
+}
+
 func createGaugeMetrics(metrics *Metrics) []models.Metrics {
 	gauge := map[string]float64{
 		"Alloc":         metrics.Alloc,
