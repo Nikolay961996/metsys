@@ -1,45 +1,51 @@
 package agent
 
 import (
-	"fmt"
+	"github.com/Nikolay961996/metsys/models"
 	"time"
 )
 
 type Entity struct {
-	metrics      Metrics
-	pollTicker   *time.Ticker
-	reportTicker *time.Ticker
-	config       *Config
+	doneChan chan any
 }
 
-func InitAgent(c *Config) Entity {
+func InitAgent() Entity {
 	a := Entity{
-		config:       c,
-		pollTicker:   time.NewTicker(c.PollInterval),
-		reportTicker: time.NewTicker(c.ReportInterval),
+		doneChan: make(chan any),
 	}
+
 	return a
 }
 
-func (a *Entity) Run() {
-	for {
-		select {
-		case <-a.pollTicker.C:
-			Poll(&a.metrics)
-			fmt.Println("Metrics poll")
-		case <-a.reportTicker.C:
-			err := Report(&a.metrics, a.config.SendToServerAddress, a.config.KeyForSigning)
-			if err != nil {
-				fmt.Println("Error while reporting: ", err)
-			} else {
-				a.metrics.PollCount = 0
-				fmt.Println("Metrics reported")
-			}
-		}
-	}
+func (a *Entity) Run(config *Config) {
+	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
+	newMetricsChan := runPollWorker(config.PollInterval, a.doneChan)
+	runReportWorkers(a.doneChan, config.SendMetricsRateLimit, jobsChan, config.SendToServerAddress, config.KeyForSigning)
+	listenMetricsAndFadeOut(a.doneChan, config.ReportInterval, newMetricsChan, jobsChan)
 }
 
 func (a *Entity) Stop() {
-	a.pollTicker.Stop()
-	a.reportTicker.Stop()
+	close(a.doneChan)
+}
+
+func listenMetricsAndFadeOut(doneChan chan any, period time.Duration, metricsCn <-chan Metrics, jobsChan chan<- workerJob) {
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+	var metrics Metrics
+
+	for {
+		select {
+		case newMetrics := <-metricsCn:
+			metrics = newMetrics
+		case <-ticker.C:
+			metricsArray := createMetricsArray(&metrics)
+			for _, m := range metricsArray {
+				jobsChan <- workerJob{oneMetrics: m}
+			}
+			metrics.PollCount = 0
+		case <-doneChan:
+			models.Log.Warn("Listen fadeOut closed")
+			return
+		}
+	}
 }

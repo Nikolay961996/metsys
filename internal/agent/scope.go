@@ -24,23 +24,10 @@ func (e *HTTPStatusError) Error() string {
 	return fmt.Sprintf("HTTP error: status %d", e.StatusCode)
 }
 
-func Report(metrics *Metrics, serverAddress string, keyForSigning string) error {
+func Report(metrics models.Metrics, serverAddress string, keyForSigning string) error {
 	client := resty.New()
-
-	allMetrics := createMetricsArray(metrics)
-	if len(allMetrics) == 0 {
-		return nil
-	}
 	url := fmt.Sprintf("%s/update/", serverAddress)
-
-	for _, m := range allMetrics {
-		err := sendToServer(client, url, &m, keyForSigning)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return sendToServer(client, url, &metrics, keyForSigning)
 }
 
 func createMetricsArray(metrics *Metrics) []models.Metrics {

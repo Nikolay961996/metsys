@@ -66,8 +66,11 @@ func TestSendRequest(t *testing.T) {
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
-	err := Report(&metrics, ts.URL, "")
-	assert.NoError(t, err)
+	arr := createMetricsArray(&metrics)
+	for _, m := range arr {
+		err := Report(m, ts.URL, "")
+		assert.NoError(t, err)
+	}
 }
 
 func metricBatchServerTestHandler(r *http.Request, t *testing.T, metrics *Metrics) {
