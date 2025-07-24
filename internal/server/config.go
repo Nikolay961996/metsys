@@ -16,6 +16,7 @@ type Config struct {
 	FileStoragePath    string
 	Restore            bool
 	DatabaseDSN        string
+	KeyForSigning      string
 }
 
 func DefaultConfig() Config {
@@ -25,6 +26,7 @@ func DefaultConfig() Config {
 		FileStoragePath:    "",
 		Restore:            false,
 		DatabaseDSN:        "",
+		KeyForSigning:      "",
 	}
 }
 
@@ -42,11 +44,12 @@ func (c *Config) flags() {
 	flag.StringVar(&c.FileStoragePath, "f", c.FileStoragePath, "path to file for saves")
 	flag.BoolVar(&c.Restore, "r", c.Restore, "restore save on start")
 	flag.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "database connection string")
+	flag.StringVar(&c.KeyForSigning, "k", c.KeyForSigning, "key for signing")
 
 	flag.Parse()
 
 	if flag.NArg() > 0 {
-		fmt.Printf("Unknown flags: %v\n", flag.Args())
+		models.Log.Error(fmt.Sprintf("Unknown flags: %v\n", flag.Args()))
 		os.Exit(1)
 	}
 
@@ -60,6 +63,7 @@ func (c *Config) envs() {
 		FileStoragePath string `env:"FILE_STORAGE_PATH"`
 		Restore         *bool  `env:"RESTORE"`
 		DatabaseDSN     string `env:"DATABASE_DSN"`
+		KeyForSigning   string `env:"KEY"`
 	}
 	err := env.Parse(&configEnv)
 	if err != nil {
@@ -80,5 +84,8 @@ func (c *Config) envs() {
 	}
 	if configEnv.DatabaseDSN != "" {
 		c.DatabaseDSN = configEnv.DatabaseDSN
+	}
+	if configEnv.KeyForSigning != "" {
+		c.KeyForSigning = configEnv.KeyForSigning
 	}
 }

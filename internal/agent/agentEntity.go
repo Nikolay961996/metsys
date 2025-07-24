@@ -1,45 +1,67 @@
 package agent
 
 import (
-	"fmt"
+	"context"
+	"github.com/Nikolay961996/metsys/models"
 	"time"
 )
 
 type Entity struct {
-	metrics      Metrics
-	pollTicker   *time.Ticker
-	reportTicker *time.Ticker
-	config       *Config
+	doneCtx context.Context
+	cancel  context.CancelFunc
 }
 
-func InitAgent(c *Config) Entity {
+func InitAgent() Entity {
+	ctx, c := context.WithCancel(context.Background())
 	a := Entity{
-		config:       c,
-		pollTicker:   time.NewTicker(c.PollInterval),
-		reportTicker: time.NewTicker(c.ReportInterval),
+		doneCtx: ctx,
+		cancel:  c,
 	}
+
 	return a
 }
 
-func (a *Entity) Run() {
-	for {
-		select {
-		case <-a.pollTicker.C:
-			Poll(&a.metrics)
-			fmt.Println("Metrics poll")
-		case <-a.reportTicker.C:
-			err := Report(&a.metrics, a.config.SendToServerAddress)
-			if err != nil {
-				fmt.Println("Error while reporting: ", err)
-			} else {
-				a.metrics.PollCount = 0
-				fmt.Println("Metrics reported")
-			}
-		}
+func (a *Entity) Run(config *Config) {
+	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
+	newMetricsChan := runPollWorker(config.PollInterval, a.doneCtx)
+	newGopsutilMetricsChan := runPollGopsutilWorker(config.PollInterval, a.doneCtx)
+	for i := 0; i < config.SendMetricsRateLimit; i++ {
+		go runReportWorker(i, a.doneCtx, jobsChan, config.SendToServerAddress, config.KeyForSigning)
 	}
+
+	listenMetricsAndFadeOut(a.doneCtx, config.ReportInterval, newMetricsChan, newGopsutilMetricsChan, jobsChan)
 }
 
 func (a *Entity) Stop() {
-	a.pollTicker.Stop()
-	a.reportTicker.Stop()
+	a.cancel()
+}
+
+func listenMetricsAndFadeOut(doneCtx context.Context, period time.Duration, metricsCn <-chan Metrics, gopsutilMetricsCn <-chan MetricsGopsutil, jobsChan chan<- workerJob) {
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+	var metrics Metrics
+	var gopsutilMetrics MetricsGopsutil
+
+	for {
+		select {
+		case newMetrics := <-metricsCn:
+			metrics = newMetrics
+		case newGMetrics := <-gopsutilMetricsCn:
+			gopsutilMetrics = newGMetrics
+		case <-ticker.C:
+			metricsArray := createMetricsArray(&metrics)
+			for _, m := range metricsArray {
+				jobsChan <- workerJob{oneMetrics: m}
+			}
+			metrics.PollCount = 0
+
+			gMetricsArray := createGopsutilMetricsArray(&gopsutilMetrics)
+			for _, m := range gMetricsArray {
+				jobsChan <- workerJob{oneMetrics: m}
+			}
+		case <-doneCtx.Done():
+			models.Log.Warn("Listen fadeOut closed")
+			return
+		}
+	}
 }

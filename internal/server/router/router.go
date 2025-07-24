@@ -10,12 +10,16 @@ import (
 func MetricsRouterTest() *chi.Mux {
 	s := storage.NewFileStorage("/local.db", 5*time.Second, false)
 
-	return MetricsRouterWithServer(s)
+	return MetricsRouterWithServer(s, "")
 }
 
-func MetricsRouterWithServer(s repositories.Storage) *chi.Mux {
+func MetricsRouterWithServer(s repositories.Storage, keyForSigning string) *chi.Mux {
 	r := chi.NewRouter()
-	r.Use(WithDecompressionRequest, WithLogger)
+	r.Use(
+		WithDecompressionRequest,
+		WithLogger,
+		WithSigningCheck(keyForSigning),
+		WithSigningResponse(keyForSigning))
 
 	r.Get("/", WithCompressionResponse(getDashboardHandler(s)))
 	r.Get("/ping", pingDatabase(s))

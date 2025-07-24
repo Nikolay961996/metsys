@@ -8,7 +8,7 @@ func main() {
 	c := agent.DefaultConfig()
 	c.Parse()
 
-	a := agent.InitAgent(&c)
-	a.Run()
+	a := agent.InitAgent()
+	a.Run(&c)
 	defer a.Stop()
 }

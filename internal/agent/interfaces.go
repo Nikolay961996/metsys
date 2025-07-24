@@ -31,3 +31,9 @@ type Metrics struct {
 	PollCount     int64
 	RandomValue   float64
 }
+
+type MetricsGopsutil struct {
+	TotalMemory     float64
+	FreeMemory      float64
+	CPUutilization1 float64
+}
