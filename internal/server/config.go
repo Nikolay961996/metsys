@@ -49,7 +49,7 @@ func (c *Config) flags() {
 	flag.Parse()
 
 	if flag.NArg() > 0 {
-		fmt.Printf("Unknown flags: %v\n", flag.Args())
+		models.Log.Error(fmt.Sprintf("Unknown flags: %v\n", flag.Args()))
 		os.Exit(1)
 	}
 

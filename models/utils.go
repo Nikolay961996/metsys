@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"time"
 )
@@ -10,7 +11,7 @@ func Retryer(f func() error, retryableError ...error) error {
 	// 1.2...3.....4x
 	tryStep := 1
 	for tryStep <= MaxErrRetryCount {
-		fmt.Println("retry ", tryStep)
+		Log.Error(fmt.Sprintf("Unknown flags: %v\n", flag.Args()))
 		err := f()
 		if err == nil {
 			return nil
@@ -40,7 +41,7 @@ func RetryerCon(f func() error, isRetryable func(error) bool) error {
 	// 1.2...3.....4x
 	tryStep := 1
 	for tryStep <= MaxErrRetryCount {
-		fmt.Println("retryCon ", tryStep)
+		Log.Warn(fmt.Sprintf("retry step: %d", tryStep))
 		err := f()
 		if err == nil {
 			return nil

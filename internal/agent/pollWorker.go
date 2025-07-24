@@ -1,14 +1,14 @@
 package agent
 
 import (
-	"fmt"
+	"context"
 	"github.com/Nikolay961996/metsys/models"
 	"time"
 )
 
-func runPollWorker(period time.Duration, doneChan chan any) chan Metrics {
+func runPollWorker(period time.Duration, doneCtx context.Context) chan Metrics {
 	ticker := time.NewTicker(period)
-	outCh := make(chan Metrics)
+	outCh := make(chan Metrics, 3)
 
 	go func() {
 		m := Metrics{}
@@ -19,8 +19,8 @@ func runPollWorker(period time.Duration, doneChan chan any) chan Metrics {
 			case <-ticker.C:
 				Poll(&m)
 				outCh <- m
-				fmt.Println("Metrics poll")
-			case <-doneChan:
+				models.Log.Info("Metrics poll")
+			case <-doneCtx.Done():
 				models.Log.Warn("PollWorker get done signal")
 				return
 			}

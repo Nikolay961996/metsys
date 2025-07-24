@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"github.com/Nikolay961996/metsys/models"
 	"math/rand"
 	"runtime"
@@ -47,7 +48,11 @@ func Poll(metrics *Metrics) {
 }
 
 func PollGopsutil(metrics *MetricsGopsutil) {
-	v, _ := mem.VirtualMemory()
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("Gopsutil polling: %s", err.Error()))
+		return
+	}
 	metrics.TotalMemory = float64(v.Total)
 	metrics.FreeMemory = float64(v.Free)
 

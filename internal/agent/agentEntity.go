@@ -1,17 +1,21 @@
 package agent
 
 import (
+	"context"
 	"github.com/Nikolay961996/metsys/models"
 	"time"
 )
 
 type Entity struct {
-	doneChan chan any
+	doneCtx context.Context
+	cancel  context.CancelFunc
 }
 
 func InitAgent() Entity {
+	ctx, c := context.WithCancel(context.Background())
 	a := Entity{
-		doneChan: make(chan any),
+		doneCtx: ctx,
+		cancel:  c,
 	}
 
 	return a
@@ -19,17 +23,20 @@ func InitAgent() Entity {
 
 func (a *Entity) Run(config *Config) {
 	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
-	newMetricsChan := runPollWorker(config.PollInterval, a.doneChan)
-	newGopsutilMetricsChan := runPollGopsutilWorker(config.PollInterval, a.doneChan)
-	runReportWorkers(a.doneChan, config.SendMetricsRateLimit, jobsChan, config.SendToServerAddress, config.KeyForSigning)
-	listenMetricsAndFadeOut(a.doneChan, config.ReportInterval, newMetricsChan, newGopsutilMetricsChan, jobsChan)
+	newMetricsChan := runPollWorker(config.PollInterval, a.doneCtx)
+	newGopsutilMetricsChan := runPollGopsutilWorker(config.PollInterval, a.doneCtx)
+	for i := 0; i < config.SendMetricsRateLimit; i++ {
+		go runReportWorker(i, a.doneCtx, jobsChan, config.SendToServerAddress, config.KeyForSigning)
+	}
+
+	listenMetricsAndFadeOut(a.doneCtx, config.ReportInterval, newMetricsChan, newGopsutilMetricsChan, jobsChan)
 }
 
 func (a *Entity) Stop() {
-	close(a.doneChan)
+	a.cancel()
 }
 
-func listenMetricsAndFadeOut(doneChan chan any, period time.Duration, metricsCn <-chan Metrics, gopsutilMetricsCn <-chan MetricsGopsutil, jobsChan chan<- workerJob) {
+func listenMetricsAndFadeOut(doneCtx context.Context, period time.Duration, metricsCn <-chan Metrics, gopsutilMetricsCn <-chan MetricsGopsutil, jobsChan chan<- workerJob) {
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
 	var metrics Metrics
@@ -52,7 +59,7 @@ func listenMetricsAndFadeOut(doneChan chan any, period time.Duration, metricsCn 
 			for _, m := range gMetricsArray {
 				jobsChan <- workerJob{oneMetrics: m}
 			}
-		case <-doneChan:
+		case <-doneCtx.Done():
 			models.Log.Warn("Listen fadeOut closed")
 			return
 		}

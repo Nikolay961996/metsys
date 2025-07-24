@@ -5,6 +5,8 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/Nikolay961996/metsys/models"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 )
@@ -20,7 +22,8 @@ func WithSigningCheck(keyForSigning string) func(h http.Handler) http.Handler {
 
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				models.Log.Error("error read request body", zap.Error(err))
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
 			defer r.Body.Close()

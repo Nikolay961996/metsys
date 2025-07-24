@@ -3,6 +3,7 @@ package agent
 import (
 	"flag"
 	"fmt"
+	"github.com/Nikolay961996/metsys/models"
 	"github.com/caarlos0/env/v6"
 	"os"
 	"strings"
@@ -30,7 +31,7 @@ func DefaultConfig() Config {
 func (c *Config) Parse() {
 	c.flags()
 	c.envs()
-	fmt.Println("Send to", c.SendToServerAddress)
+	models.Log.Info(fmt.Sprintf("Send to %s", c.SendToServerAddress))
 }
 
 func (c *Config) flags() {
@@ -42,7 +43,7 @@ func (c *Config) flags() {
 	flag.Parse()
 
 	if flag.NArg() > 0 {
-		fmt.Printf("Unknown flags: %v\n", flag.Args())
+		models.Log.Error(fmt.Sprintf("Unknown flags: %v\n", flag.Args()))
 		os.Exit(1)
 	}
 

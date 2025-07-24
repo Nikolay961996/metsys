@@ -162,7 +162,7 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 			}
 			return e
 		}, func(err error) bool {
-			fmt.Println("Retry error: ", err)
+			models.Log.Warn(fmt.Sprintf("Retry error: %s", err.Error()))
 			var netErr net.Error
 			var netStatusErr *HTTPStatusError
 			return errors.As(err, &netErr) || errors.As(err, &netStatusErr) || errors.Is(err, io.EOF)
