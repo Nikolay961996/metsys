@@ -14,6 +14,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sync"
 )
 
 type HTTPStatusError struct {
@@ -180,14 +181,23 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 
 func compressToGzip(metrics []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
-	cw := gzip.NewWriter(buf)
-
+	var gzipWriterPool = sync.Pool{
+		New: func() any {
+			gz, _ := gzip.NewWriterLevel(io.Discard, gzip.BestCompression)
+			return gz
+		},
+	}
+	cw := gzipWriterPool.Get().(*gzip.Writer)
+	cw.Reset(buf)
+	defer func() {
+		cw.Close()
+		gzipWriterPool.Put(cw)
+	}()
 	if _, err := cw.Write(metrics); err != nil {
 		return nil, fmt.Errorf("error json write: %s", err.Error())
 	}
 	if err := cw.Close(); err != nil {
 		return nil, fmt.Errorf("error closing gzip writer: %s", err.Error())
 	}
-
 	return buf.Bytes(), nil
 }

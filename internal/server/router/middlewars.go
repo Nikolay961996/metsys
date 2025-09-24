@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -70,34 +71,50 @@ func (w *compressedWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
+var gzipReaderPool = sync.Pool{
+	New: func() any {
+		return new(gzip.Reader)
+	},
+}
+
 func WithDecompressionRequest(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
-			gz, err := gzip.NewReader(r.Body)
+			gz := gzipReaderPool.Get().(*gzip.Reader)
+			err := gz.Reset(r.Body)
 			if err != nil {
 				models.Log.Error("error creating gzip reader", zap.Error(err))
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			}
-			defer gz.Close()
+			defer func() {
+				gz.Close()
+				gzipReaderPool.Put(gz)
+			}()
 			r.Body = gz
 		}
 		h.ServeHTTP(w, r)
 	})
 }
 
+var gzipWriterPool = sync.Pool{
+	New: func() any {
+		gz, _ := gzip.NewWriterLevel(io.Discard, gzip.BestCompression)
+		return gz
+	},
+}
+
 func WithCompressionResponse(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
-			if err != nil {
-				models.Log.Error("error creating gzip writer", zap.Error(err))
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			}
-			defer gz.Close()
+			gz := gzipWriterPool.Get().(*gzip.Writer)
+			gz.Reset(w)
 			w.Header().Add("Content-Encoding", "gzip")
+			defer func() {
+				gz.Close()
+				gzipWriterPool.Put(gz)
+			}()
 			w = &compressedWriter{w, gz}
 		}
-
 		h.ServeHTTP(w, r)
 	}
 }
