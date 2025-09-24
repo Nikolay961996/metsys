@@ -1,9 +1,14 @@
 package agent
 
 import (
+	"fmt"
+	"github.com/Nikolay961996/metsys/models"
 	"math/rand"
 	"runtime"
 	"time"
+
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 func Poll(metrics *Metrics) {
@@ -40,4 +45,21 @@ func Poll(metrics *Metrics) {
 	metrics.TotalAlloc = float64(stats.TotalAlloc)
 	metrics.PollCount++
 	metrics.RandomValue = random.Float64()
+}
+
+func PollGopsutil(metrics *MetricsGopsutil) {
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("Gopsutil polling: %s", err.Error()))
+		return
+	}
+	metrics.TotalMemory = float64(v.Total)
+	metrics.FreeMemory = float64(v.Free)
+
+	cpuPercent, err := cpu.Percent(time.Second, true)
+	if err != nil {
+		models.Log.Error("Ошибка при сборе метрик CPU: %v")
+	} else {
+		metrics.CPUutilization1 = cpuPercent[0]
+	}
 }

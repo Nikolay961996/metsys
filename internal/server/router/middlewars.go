@@ -75,7 +75,8 @@ func WithDecompressionRequest(h http.Handler) http.Handler {
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				models.Log.Error("error creating gzip reader", zap.Error(err))
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			}
 			defer gz.Close()
 			r.Body = gz
@@ -89,7 +90,8 @@ func WithCompressionResponse(h http.Handler) http.HandlerFunc {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				models.Log.Error("error creating gzip writer", zap.Error(err))
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			}
 			defer gz.Close()
 			w.Header().Add("Content-Encoding", "gzip")

@@ -26,8 +26,8 @@ func InitServer(c *Config) MetricServer {
 	return a
 }
 
-func (s *MetricServer) Run(runOnServerAddress string) {
-	err := http.ListenAndServe(runOnServerAddress, router.MetricsRouterWithServer(s.Storage))
+func (s *MetricServer) Run(runOnServerAddress string, keyForSigning string) {
+	err := http.ListenAndServe(runOnServerAddress, router.MetricsRouterWithServer(s.Storage, keyForSigning))
 	if err != nil {
 		models.Log.Error(err.Error())
 	}
