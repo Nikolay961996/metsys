@@ -3,12 +3,14 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Nikolay961996/metsys/models"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 func TestStorage(t *testing.T) {

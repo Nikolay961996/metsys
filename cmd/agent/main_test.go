@@ -1,10 +1,12 @@
 package main
 
 import (
-	"github.com/Nikolay961996/metsys/internal/agent"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Nikolay961996/metsys/internal/agent"
 )
 
 func TestTimers(t *testing.T) {

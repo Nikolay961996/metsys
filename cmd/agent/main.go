@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/Nikolay961996/metsys/internal/agent"
-	"github.com/Nikolay961996/metsys/models"
 	"net/http"
 	_ "net/http/pprof"
+
+	"github.com/Nikolay961996/metsys/internal/agent"
+	"github.com/Nikolay961996/metsys/models"
 )
 
 const (

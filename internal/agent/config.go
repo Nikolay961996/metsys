@@ -3,11 +3,13 @@ package agent
 import (
 	"flag"
 	"fmt"
-	"github.com/Nikolay961996/metsys/models"
-	"github.com/caarlos0/env/v6"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/caarlos0/env/v6"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 type Config struct {

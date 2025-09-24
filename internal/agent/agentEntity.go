@@ -2,8 +2,9 @@ package agent
 
 import (
 	"context"
-	"github.com/Nikolay961996/metsys/models"
 	"time"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 type Entity struct {

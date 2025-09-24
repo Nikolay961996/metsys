@@ -2,13 +2,15 @@ package router
 
 import (
 	"compress/gzip"
-	"github.com/Nikolay961996/metsys/models"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 type (

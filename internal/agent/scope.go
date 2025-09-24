@@ -9,12 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Nikolay961996/metsys/models"
-	"github.com/go-resty/resty/v2"
 	"io"
 	"net"
 	"net/http"
 	"sync"
+
+	"github.com/go-resty/resty/v2"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 type HTTPStatusError struct {
