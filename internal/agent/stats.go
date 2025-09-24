@@ -12,6 +12,7 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
+// Poll new metrics
 func Poll(metrics *Metrics) {
 	var stats runtime.MemStats
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -48,6 +49,7 @@ func Poll(metrics *Metrics) {
 	metrics.RandomValue = random.Float64()
 }
 
+// Poll new additional metrics
 func PollGopsutil(metrics *MetricsGopsutil) {
 	v, err := mem.VirtualMemory()
 	if err != nil {

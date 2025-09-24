@@ -1,5 +1,6 @@
 package agent
 
+// Metrics main entity
 type Metrics struct {
 	Alloc         float64
 	BuckHashSys   float64
@@ -32,6 +33,7 @@ type Metrics struct {
 	RandomValue   float64
 }
 
+// MetricsGopsutil additional metrics
 type MetricsGopsutil struct {
 	TotalMemory     float64
 	FreeMemory      float64

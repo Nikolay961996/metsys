@@ -6,6 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// metric types
 const (
 	Counter = "counter"
 	Gauge   = "gauge"
@@ -16,8 +17,8 @@ var (
 )
 
 const (
-	SendMetricTimeout = time.Minute
-	MaxErrRetryCount  = 4
+	SendMetricTimeout = time.Minute // period for send timeout
+	MaxErrRetryCount  = 4           // max expenecial back-off (not included)
 )
 
 // NOTE: Не усложняем пример, вводя иерархическую вложенность структур.
@@ -33,6 +34,7 @@ type Metrics struct {
 	//Hash  string   `json:"hash,omitempty"`
 }
 
+// Initialize logger
 func Initialize(level string) error {
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {

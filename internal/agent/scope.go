@@ -19,14 +19,17 @@ import (
 	"github.com/Nikolay961996/metsys/models"
 )
 
+// HTTPStatusError manual error type
 type HTTPStatusError struct {
 	StatusCode int
 }
 
+// Error implementation
 func (e *HTTPStatusError) Error() string {
 	return fmt.Sprintf("HTTP error: status %d", e.StatusCode)
 }
 
+// Report to server
 func Report(metrics models.Metrics, serverAddress string, keyForSigning string) error {
 	client := resty.New()
 	url := fmt.Sprintf("%s/update/", serverAddress)
@@ -112,10 +115,11 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 		ID:    metricName,
 		MType: metricType,
 	}
-	if metricType == models.Gauge {
+	switch metricType {
+	case models.Gauge:
 		v := metricValue.(float64)
 		mr.Value = &v
-	} else if metricType == models.Counter {
+	case models.Counter:
 		v := metricValue.(int64)
 		mr.Delta = &v
 	}

@@ -1,3 +1,4 @@
+// Entry point for agent app.
 package main
 
 import (

@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Retryer special function for expenecial back-off with error types
 func Retryer(f func() error, retryableError ...error) error {
 	// 1.2...3.....4x
 	tryStep := 1
@@ -37,6 +38,7 @@ func Retryer(f func() error, retryableError ...error) error {
 	return nil
 }
 
+// RetryerCon special function for expenecial back-off with check function.
 func RetryerCon(f func() error, isRetryable func(error) bool) error {
 	// 1.2...3.....4x
 	tryStep := 1
