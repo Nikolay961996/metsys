@@ -3,14 +3,16 @@ package router
 import (
 	"context"
 	"errors"
-	"github.com/Nikolay961996/metsys/internal/server/repositories"
-	"github.com/Nikolay961996/metsys/models"
-	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+
+	"github.com/Nikolay961996/metsys/internal/server/repositories"
+	"github.com/Nikolay961996/metsys/models"
 )
 
 func pingDatabase(storage repositories.Storage) http.HandlerFunc {

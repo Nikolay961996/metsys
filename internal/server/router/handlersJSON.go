@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
-	"net/http"
 )
 
 func isCorrectMethod(expectedMethod string, w http.ResponseWriter, r *http.Request) bool {

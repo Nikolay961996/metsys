@@ -2,10 +2,11 @@ package agent
 
 import (
 	"fmt"
-	"github.com/Nikolay961996/metsys/models"
 	"math/rand"
 	"runtime"
 	"time"
+
+	"github.com/Nikolay961996/metsys/models"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"

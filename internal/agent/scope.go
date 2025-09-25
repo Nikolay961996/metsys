@@ -9,11 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Nikolay961996/metsys/models"
-	"github.com/go-resty/resty/v2"
 	"io"
 	"net"
 	"net/http"
+	"sync"
+
+	"github.com/go-resty/resty/v2"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 type HTTPStatusError struct {
@@ -180,14 +183,23 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 
 func compressToGzip(metrics []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
-	cw := gzip.NewWriter(buf)
-
+	var gzipWriterPool = sync.Pool{
+		New: func() any {
+			gz, _ := gzip.NewWriterLevel(io.Discard, gzip.BestCompression)
+			return gz
+		},
+	}
+	cw := gzipWriterPool.Get().(*gzip.Writer)
+	cw.Reset(buf)
+	defer func() {
+		cw.Close()
+		gzipWriterPool.Put(cw)
+	}()
 	if _, err := cw.Write(metrics); err != nil {
 		return nil, fmt.Errorf("error json write: %s", err.Error())
 	}
 	if err := cw.Close(); err != nil {
 		return nil, fmt.Errorf("error closing gzip writer: %s", err.Error())
 	}
-
 	return buf.Bytes(), nil
 }
