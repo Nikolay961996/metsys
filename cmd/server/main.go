@@ -17,5 +17,3 @@ func main() {
 	entity.Run(c.RunOnServerAddress, c.KeyForSigning)
 	defer entity.Stop()
 }
-
-//test build
