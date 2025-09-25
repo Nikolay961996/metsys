@@ -4,11 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/Nikolay961996/metsys/internal/server/router"
-	"github.com/Nikolay961996/metsys/internal/server/storage"
-	"github.com/Nikolay961996/metsys/models"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +11,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/Nikolay961996/metsys/internal/server/router"
+	"github.com/Nikolay961996/metsys/internal/server/storage"
+	"github.com/Nikolay961996/metsys/models"
 )
 
 func TestPositiveServer(t *testing.T) {

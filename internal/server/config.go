@@ -3,11 +3,13 @@ package server
 import (
 	"flag"
 	"fmt"
-	"github.com/Nikolay961996/metsys/models"
-	"github.com/caarlos0/env/v6"
-	"go.uber.org/zap"
 	"os"
 	"time"
+
+	"github.com/caarlos0/env/v6"
+	"go.uber.org/zap"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 type Config struct {

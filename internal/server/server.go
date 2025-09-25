@@ -1,11 +1,12 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
 	"github.com/Nikolay961996/metsys/models"
-	"net/http"
 )
 
 type MetricServer struct {

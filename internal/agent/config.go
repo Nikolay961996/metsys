@@ -1,23 +1,28 @@
+// Configuration agent
 package agent
 
 import (
 	"flag"
 	"fmt"
-	"github.com/Nikolay961996/metsys/models"
-	"github.com/caarlos0/env/v6"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/caarlos0/env/v6"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
+// Config for agent
 type Config struct {
-	SendToServerAddress  string
-	PollInterval         time.Duration
-	ReportInterval       time.Duration
-	KeyForSigning        string
-	SendMetricsRateLimit int
+	SendToServerAddress  string        // server address for reporting
+	PollInterval         time.Duration // poll time period
+	ReportInterval       time.Duration // report time period
+	KeyForSigning        string        // private key for signing
+	SendMetricsRateLimit int           // send metrics rate limit
 }
 
+// DefaultConfig default config
 func DefaultConfig() Config {
 	return Config{
 		SendToServerAddress:  "http://localhost:8080",
@@ -28,6 +33,7 @@ func DefaultConfig() Config {
 	}
 }
 
+// Parse from all sources
 func (c *Config) Parse() {
 	c.flags()
 	c.envs()

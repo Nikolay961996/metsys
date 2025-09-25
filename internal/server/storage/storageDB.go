@@ -5,16 +5,18 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/Nikolay961996/metsys/internal/server/repositories"
-	"github.com/Nikolay961996/metsys/models"
+	"net"
+	"strconv"
+
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/postgres"
 	_ "github.com/golang-migrate/migrate/source/file"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"net"
-	"strconv"
+
+	"github.com/Nikolay961996/metsys/internal/server/repositories"
+	"github.com/Nikolay961996/metsys/models"
 )
 
 type DBStorage struct {

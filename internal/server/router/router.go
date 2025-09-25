@@ -1,10 +1,12 @@
 package router
 
 import (
+	"time"
+
+	"github.com/go-chi/chi/v5"
+
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
-	"github.com/go-chi/chi/v5"
-	"time"
 )
 
 func MetricsRouterTest() *chi.Mux {
