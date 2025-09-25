@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
 )
 
@@ -60,8 +61,22 @@ func (m *FileStorage) AddCounter(metricName string, value int64) {
 	}
 }
 
+func (m *FileStorage) GetCounter(metricName string) (int64, error) {
+	return m.MemStorage.GetCounter(metricName)
+}
+
+func (m *FileStorage) GetGauge(metricName string) (float64, error) {
+	return m.MemStorage.GetGauge(metricName)
+}
+
+func (m *FileStorage) GetAll() []repositories.MetricDto {
+	return m.MemStorage.GetAll()
+}
+
 func (m *FileStorage) Close() {
-	defer m.saveTimer.Stop()
+	if !m.isSyncSave && m.saveTimer != nil {
+		m.saveTimer.Stop()
+	}
 }
 
 func (m *FileStorage) PingContext(_ context.Context) error {
@@ -77,6 +92,7 @@ func (m *FileStorage) backgroundSaver() {
 func (m *FileStorage) StartTransaction(_ context.Context) error {
 	return nil
 }
+
 func (m *FileStorage) CommitTransaction() error {
 	return nil
 }
