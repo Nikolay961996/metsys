@@ -46,9 +46,14 @@ func Example_getMetricValueHandler() {
 	server := httptest.NewServer(r)
 	defer server.Close()
 
-	http.Post(server.URL+"/update/gauge/test_metric/123.45", "", nil)
+	resp, err := http.Post(server.URL+"/update/gauge/test_metric/123.45", "", nil)
+	if err != nil {
+		fmt.Printf("Ошибка: %v", err)
+		return
+	}
+	defer resp.Body.Close()
 
-	resp, err := http.Get(server.URL + "/value/gauge/test_metric")
+	resp, err = http.Get(server.URL + "/value/gauge/test_metric")
 	if err != nil {
 		fmt.Printf("Ошибка: %v", err)
 		return
@@ -109,7 +114,12 @@ func Example_getMetricValueJSONHandler() {
 		Value: &value,
 	}
 	jsonData, _ := json.Marshal(updateMetric)
-	http.Post(server.URL+"/update/", "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(server.URL+"/update/", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Ошибка: %v", err)
+		return
+	}
+	defer resp.Body.Close()
 
 	metric := models.Metrics{
 		ID:    "cpu_usage",
@@ -117,7 +127,7 @@ func Example_getMetricValueJSONHandler() {
 	}
 
 	jsonData, _ = json.Marshal(metric)
-	resp, err := http.Post(server.URL+"/value/", "application/json", bytes.NewBuffer(jsonData))
+	resp, err = http.Post(server.URL+"/value/", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Printf("Ошибка: %v", err)
 		return
@@ -284,9 +294,18 @@ func Example_metricTypes() {
 	server := httptest.NewServer(r)
 	defer server.Close()
 
-	http.Post(server.URL+"/update/gauge/load_average/1.25", "", nil)
-
-	http.Post(server.URL+"/update/counter/page_views/100", "", nil)
+	resp, err := http.Post(server.URL+"/update/gauge/load_average/1.25", "", nil)
+	if err != nil {
+		fmt.Printf("Ошибка: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	resp, err = http.Post(server.URL+"/update/counter/page_views/100", "", nil)
+	if err != nil {
+		fmt.Printf("Ошибка: %v", err)
+		return
+	}
+	defer resp.Body.Close()
 
 	resp1, _ := http.Get(server.URL + "/value/gauge/load_average")
 	resp2, _ := http.Get(server.URL + "/value/counter/page_views")
@@ -318,7 +337,12 @@ func Example_jsonRequestResponse() {
 
 	jsonData, _ := json.Marshal(updateMetric)
 
-	http.Post(server.URL+"/update/", "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(server.URL+"/update/", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Ошибка: %v", err)
+		return
+	}
+	defer resp.Body.Close()
 
 	getMetric := models.Metrics{
 		ID:    "disk_usage",
@@ -326,7 +350,7 @@ func Example_jsonRequestResponse() {
 	}
 
 	jsonData, _ = json.Marshal(getMetric)
-	resp, err := http.Post(server.URL+"/value/", "application/json", bytes.NewBuffer(jsonData))
+	resp, err = http.Post(server.URL+"/value/", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Printf("Ошибка: %v", err)
 		return
