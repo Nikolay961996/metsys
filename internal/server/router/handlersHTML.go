@@ -2,9 +2,10 @@ package router
 
 import (
 	"fmt"
-	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"html/template"
 	"net/http"
+
+	"github.com/Nikolay961996/metsys/internal/server/repositories"
 )
 
 func getDashboardHandler(storage repositories.Storage) http.HandlerFunc {

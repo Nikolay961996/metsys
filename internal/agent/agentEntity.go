@@ -1,16 +1,20 @@
+// Internal agent logic.
 package agent
 
 import (
 	"context"
-	"github.com/Nikolay961996/metsys/models"
 	"time"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
+// Entry main entity
 type Entity struct {
-	doneCtx context.Context
-	cancel  context.CancelFunc
+	doneCtx context.Context    // for cancel
+	cancel  context.CancelFunc // for call cancel
 }
 
+// InitAgent creating new agent entity
 func InitAgent() Entity {
 	ctx, c := context.WithCancel(context.Background())
 	a := Entity{
@@ -21,6 +25,7 @@ func InitAgent() Entity {
 	return a
 }
 
+// Run agent
 func (a *Entity) Run(config *Config) {
 	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
 	newMetricsChan := runPollWorker(config.PollInterval, a.doneCtx)
@@ -32,6 +37,7 @@ func (a *Entity) Run(config *Config) {
 	listenMetricsAndFadeOut(a.doneCtx, config.ReportInterval, newMetricsChan, newGopsutilMetricsChan, jobsChan)
 }
 
+// Stop agent
 func (a *Entity) Stop() {
 	a.cancel()
 }

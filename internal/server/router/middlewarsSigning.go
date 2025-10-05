@@ -5,10 +5,12 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/Nikolay961996/metsys/models"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
+
+	"go.uber.org/zap"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 func WithSigningCheck(keyForSigning string) func(h http.Handler) http.Handler {
