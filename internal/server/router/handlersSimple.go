@@ -1,3 +1,4 @@
+// Package router consist simple handlers
 package router
 
 import (

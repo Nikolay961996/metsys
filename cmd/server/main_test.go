@@ -116,20 +116,20 @@ func TestServer(t *testing.T) {
 		statusCode int
 	}
 	tests := []struct {
-		name   string
 		method string
 		url    string
+		name   string
 		want   want
 	}{
-		{"test #1", http.MethodPost, "/update/gauge/memory/12.34", want{http.StatusOK}},
-		{"test #2", http.MethodPost, "/update/counter/health/-99", want{http.StatusOK}},
-		{"test #3", http.MethodGet, "/update/gauge/test/12.34", want{http.StatusMethodNotAllowed}},
-		{"test #4", http.MethodPost, "/update/undefinedType/test/12.34", want{http.StatusBadRequest}},
-		{"test #5", http.MethodPost, "/update/gauge/memory", want{http.StatusNotFound}},
-		{"test #6", http.MethodPost, "/update/gauge/memory/", want{http.StatusNotFound}},
-		{"test #7", http.MethodPost, "/update//memory/1", want{http.StatusBadRequest}},
-		{"test #8", http.MethodPost, "/update/gauge//1", want{http.StatusNotFound}},
-		{"test #9", http.MethodPost, "/update///", want{http.StatusNotFound}},
+		{http.MethodPost, "/update/gauge/memory/12.34", "test #1", want{http.StatusOK}},
+		{http.MethodPost, "/update/counter/health/-99", "test #2", want{http.StatusOK}},
+		{http.MethodGet, "/update/gauge/test/12.34", "test #3", want{http.StatusMethodNotAllowed}},
+		{http.MethodPost, "/update/undefinedType/test/12.34", "test #4", want{http.StatusBadRequest}},
+		{http.MethodPost, "/update/gauge/memory", "test #5", want{http.StatusNotFound}},
+		{http.MethodPost, "/update/gauge/memory/", "test #6", want{http.StatusNotFound}},
+		{http.MethodPost, "/update//memory/1", "test #7", want{http.StatusBadRequest}},
+		{http.MethodPost, "/update/gauge//1", "test #8", want{http.StatusNotFound}},
+		{http.MethodPost, "/update///", "test #9", want{http.StatusNotFound}},
 	}
 
 	ts := httptest.NewServer(router.MetricsRouterTest())
@@ -151,25 +151,25 @@ func TestServer(t *testing.T) {
 
 func TestGetMetric(t *testing.T) {
 	type want struct {
-		statusCode int
 		value      string
+		statusCode int
 	}
 	tests := []struct {
-		name   string
 		method string
 		url    string
+		name   string
 		want   want
 	}{
-		{"test #1", http.MethodPost, "/update/gauge/memory/12.34", want{http.StatusOK, ""}},
-		{"test #2", http.MethodGet, "/value/gauge/memory", want{http.StatusOK, "12.34"}},
-		{"test #3", http.MethodGet, "/value/gauge/memory2", want{http.StatusNotFound, ""}},
-		{"test #4", http.MethodPost, "/update/gauge/memory/99.7654", want{http.StatusOK, ""}},
-		{"test #5", http.MethodGet, "/value/gauge/memory", want{http.StatusOK, "99.7654"}},
-		{"test #6", http.MethodGet, "/value/counter/cp", want{http.StatusNotFound, ""}},
-		{"test #7", http.MethodPost, "/update/counter/cp/123", want{http.StatusOK, ""}},
-		{"test #8", http.MethodGet, "/value/counter/cp", want{http.StatusOK, "123"}},
-		{"test #9", http.MethodPost, "/update/counter/cp/100", want{http.StatusOK, ""}},
-		{"test #10", http.MethodGet, "/value/counter/cp", want{http.StatusOK, "223"}},
+		{http.MethodPost, "/update/gauge/memory/12.34", "test #1", want{"", http.StatusOK}},
+		{http.MethodGet, "/value/gauge/memory", "test #2", want{"12.34", http.StatusOK}},
+		{http.MethodGet, "/value/gauge/memory2", "test #3", want{"", http.StatusNotFound}},
+		{http.MethodPost, "/update/gauge/memory/99.7654", "test #4", want{"", http.StatusOK}},
+		{http.MethodGet, "/value/gauge/memory", "test #5", want{"99.7654", http.StatusOK}},
+		{http.MethodGet, "/value/counter/cp", "test #6", want{"", http.StatusNotFound}},
+		{http.MethodPost, "/update/counter/cp/123", "test #7", want{"", http.StatusOK}},
+		{http.MethodGet, "/value/counter/cp", "test #8", want{"123", http.StatusOK}},
+		{http.MethodPost, "/update/counter/cp/100", "test #9", want{"", http.StatusOK}},
+		{http.MethodGet, "/value/counter/cp", "test #10", want{"223", http.StatusOK}},
 	}
 
 	ts := httptest.NewServer(router.MetricsRouterTest())
@@ -196,25 +196,25 @@ func TestGetMetric(t *testing.T) {
 
 func TestJSONSupport(t *testing.T) {
 	type want struct {
-		statusCode int
 		value      float64
 		delta      int64
+		statusCode int
 	}
 	tests := []struct {
-		name   string
 		method string
 		url    string
+		name   string
 		body   models.Metrics
 		value  float64
 		delta  int64
 		want   want
 	}{
-		{"test #1", http.MethodPost, "/update/", models.Metrics{ID: "memory", MType: models.Gauge}, 12.34, 0, want{http.StatusOK, 12.34, 0}},
-		{"test #2", http.MethodPost, "/value/", models.Metrics{ID: "memory", MType: models.Gauge}, 0, 0, want{http.StatusOK, 12.34, 0}},
-		{"test #3", http.MethodPost, "/update/", models.Metrics{ID: "cp", MType: models.Counter}, 0, 123, want{http.StatusOK, 0, 123}},
-		{"test #4", http.MethodPost, "/value/", models.Metrics{ID: "cp", MType: models.Counter}, 0, 0, want{http.StatusOK, 0, 123}},
-		{"test #5", http.MethodPost, "/update/", models.Metrics{ID: "cp", MType: models.Counter}, 0, 100, want{http.StatusOK, 0, 223}},
-		{"test #6", http.MethodPost, "/value/", models.Metrics{ID: "cp", MType: models.Counter}, 0, 0, want{http.StatusOK, 0, 223}},
+		{http.MethodPost, "/update/", "test #1", models.Metrics{ID: "memory", MType: models.Gauge}, 12.34, 0, want{12.34, 0, http.StatusOK}},
+		{http.MethodPost, "/value/", "test #2", models.Metrics{ID: "memory", MType: models.Gauge}, 0, 0, want{12.34, 0, http.StatusOK}},
+		{http.MethodPost, "/update/", "test #3", models.Metrics{ID: "cp", MType: models.Counter}, 0, 123, want{0, 123, http.StatusOK}},
+		{http.MethodPost, "/value/", "test #4", models.Metrics{ID: "cp", MType: models.Counter}, 0, 0, want{0, 123, http.StatusOK}},
+		{http.MethodPost, "/update/", "test #5", models.Metrics{ID: "cp", MType: models.Counter}, 0, 100, want{0, 223, http.StatusOK}},
+		{http.MethodPost, "/value/", "test #6", models.Metrics{ID: "cp", MType: models.Counter}, 0, 0, want{0, 223, http.StatusOK}},
 	}
 
 	ts := httptest.NewServer(router.MetricsRouterTest())

@@ -1,3 +1,4 @@
+// Package repositories consist storage interface
 package repositories
 
 import "context"

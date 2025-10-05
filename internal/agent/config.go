@@ -1,4 +1,4 @@
-// Configuration agent
+// Package agent Configuration agent
 package agent
 
 import (
@@ -16,9 +16,9 @@ import (
 // Config for agent
 type Config struct {
 	SendToServerAddress  string        // server address for reporting
+	KeyForSigning        string        // private key for signing
 	PollInterval         time.Duration // poll time period
 	ReportInterval       time.Duration // report time period
-	KeyForSigning        string        // private key for signing
 	SendMetricsRateLimit int           // send metrics rate limit
 }
 
@@ -63,9 +63,9 @@ func (c *Config) flags() {
 func (c *Config) envs() {
 	var configEnv struct {
 		Address        string `env:"ADDRESS"`
+		KeyForSigning  string `env:"KEY"`
 		ReportInterval int    `env:"REPORT_INTERVAL"`
 		PollInterval   int    `env:"POLL_INTERVAL"`
-		KeyForSigning  string `env:"KEY"`
 		SendRateLimit  int    `env:"RATE_LIMIT"`
 	}
 	err := env.Parse(&configEnv)
