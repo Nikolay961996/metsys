@@ -1,3 +1,4 @@
+// Package storage in memory storage
 package storage
 
 import (

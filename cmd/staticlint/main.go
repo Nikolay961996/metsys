@@ -11,8 +11,6 @@
 //   - Two public analyzers (unused, nilerr)
 //   - Custom analyzer prohibiting direct os.Exit call in main function of main package
 //
-// Each analyzer is described in the documentation below.
-//
 // Custom analyzer:
 //
 //	Prohibits direct usage of os.Exit in main() of main package. Use error handling and return instead.
@@ -51,7 +49,9 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unreachable"
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
 
+	"honnef.co/go/tools/simple"
 	"honnef.co/go/tools/staticcheck"
+	"honnef.co/go/tools/stylecheck"
 
 	"github.com/gostaticanalysis/nilerr"
 	"github.com/gostaticanalysis/unused"
@@ -62,16 +62,10 @@ var osExitInMainAnalyzer = &analysis.Analyzer{
 	Name: "customNoOsExitInMain",
 	Doc:  "prohibits direct os.Exit call in main() of main package",
 	Run: func(pass *analysis.Pass) (interface{}, error) {
-		// Анализируем только свои исходники
-		if pass.Pkg.Name() != "main" ||
-			len(pass.Pkg.Path()) < len("github.com/Nikolay961996/metsys") ||
-			pass.Pkg.Path()[:len("github.com/Nikolay961996/metsys")] != "github.com/Nikolay961996/metsys" {
-			return nil, nil
-		}
-		// Получаем рабочий каталог (корень проекта)
+		// current folder
 		workDir, err := os.Getwd()
 		if err != nil {
-			// Если не удалось получить рабочий каталог, анализируем всё
+			// can't get current folder. Check all
 			workDir = ""
 		}
 		workDir = filepath.Clean(workDir)
@@ -80,7 +74,7 @@ var osExitInMainAnalyzer = &analysis.Analyzer{
 				fname := pass.Fset.File(file.Pos()).Name()
 				fname = filepath.Clean(fname)
 				rel, err := filepath.Rel(workDir, fname)
-				// Если файл не лежит внутри рабочей директории, пропускаем
+				// skip not our file
 				if err != nil || strings.HasPrefix(rel, "..") {
 					continue
 				}
@@ -119,7 +113,7 @@ func main() {
 		cgocall.Analyzer,
 		composite.Analyzer,
 		copylock.Analyzer,
-		fieldalignment.Analyzer, // !
+		fieldalignment.Analyzer,
 		httpresponse.Analyzer,
 		ifaceassert.Analyzer,
 		loopclosure.Analyzer,
@@ -134,13 +128,22 @@ func main() {
 		unusedresult.Analyzer,
 	)
 
-	// Staticcheck analyzers
+	// SA class
 	for _, v := range staticcheck.Analyzers {
-		if v.Analyzer.Name[:2] == "SA" {
-			analyzers = append(analyzers, v.Analyzer)
-		}
+		analyzers = append(analyzers, v.Analyzer)
 	}
-	// Add one non-SA staticcheck analyzer (например, ST1000) — если нужен другой, добавьте вручную, но не SA1000
+
+	// S class
+	for _, v := range simple.Analyzers {
+		analyzers = append(analyzers, v.Analyzer)
+		break // one enouth
+	}
+
+	// ST class (Style)
+	for _, v := range stylecheck.Analyzers {
+		analyzers = append(analyzers, v.Analyzer)
+		break // one enouth
+	}
 
 	// Public analyzers
 	analyzers = append(analyzers, unused.Analyzer, nilerr.Analyzer)

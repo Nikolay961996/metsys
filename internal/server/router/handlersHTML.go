@@ -1,3 +1,4 @@
+// Package router consist html dashboard handler
 package router
 
 import (

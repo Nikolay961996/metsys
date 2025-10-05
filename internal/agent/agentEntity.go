@@ -1,4 +1,4 @@
-// Internal agent logic.
+// Package agent internal logic.
 package agent
 
 import (
