@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 
@@ -9,11 +10,18 @@ import (
 	"github.com/Nikolay961996/metsys/models"
 )
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 const (
 	addr = ":8081"
 )
 
 func main() {
+	printHello()
 	err := models.Initialize("info")
 	if err != nil {
 		panic(err)
@@ -31,4 +39,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func printHello() {
+	fmt.Printf("Build version: %s\n", ifNA(buildVersion))
+	fmt.Printf("Build date: %s\n", ifNA(buildDate))
+	fmt.Printf("Build commit: %s\n", ifNA(buildCommit))
+}
+
+func ifNA(s string) string {
+	if s == "" {
+		return "N/A"
+	}
+	return s
 }

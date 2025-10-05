@@ -1,3 +1,4 @@
+// Package storage real DB
 package storage
 
 import (
@@ -20,15 +21,14 @@ import (
 )
 
 type DBStorage struct {
-	databaseDSN string
-	db          *sql.DB
-	tx          *sql.Tx
-
+	db                       *sql.DB
+	tx                       *sql.Tx
 	sqlInsertOrUpdateGauge   *sql.Stmt
 	sqlInsertOrUpdateCounter *sql.Stmt
 	sqlGetGauge              *sql.Stmt
 	sqlGetCounter            *sql.Stmt
 	sqlGetAll                *sql.Stmt
+	databaseDSN              string
 }
 
 func NewDBStorage(databaseDSN string) *DBStorage {
