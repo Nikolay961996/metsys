@@ -6,7 +6,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// metric types
+// Metric types
 const (
 	Counter = "counter"
 	Gauge   = "gauge"

@@ -25,11 +25,11 @@ type Config struct {
 // DefaultConfig default config
 func DefaultConfig() Config {
 	return Config{
-		SendToServerAddress:  "http://localhost:8080",
-		PollInterval:         2 * time.Second,
-		ReportInterval:       10 * time.Second,
-		KeyForSigning:        "",
-		SendMetricsRateLimit: 1,
+		SendToServerAddress:  "http://localhost:8080", // server address. Like http://localhost:8080
+		PollInterval:         2 * time.Second,         // updating device data interval
+		ReportInterval:       10 * time.Second,        // report to server interval
+		KeyForSigning:        "",                      // private key for singing
+		SendMetricsRateLimit: 1,                       // rate limit for parallel sending to server
 	}
 }
 

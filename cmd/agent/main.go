@@ -27,5 +27,8 @@ func main() {
 
 	defer a.Stop()
 
-	_ = http.ListenAndServe(addr, nil)
+	err = http.ListenAndServe(addr, nil)
+	if err != nil {
+		panic(err)
+	}
 }

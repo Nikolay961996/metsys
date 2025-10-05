@@ -8,7 +8,7 @@ import (
 	"github.com/Nikolay961996/metsys/models"
 )
 
-// Entry main entity
+// Entity for agent
 type Entity struct {
 	doneCtx context.Context    // for cancel
 	cancel  context.CancelFunc // for call cancel
