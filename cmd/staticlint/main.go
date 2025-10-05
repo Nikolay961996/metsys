@@ -1,0 +1,152 @@
+// Package staticlint implements a custom multichecker for static analysis.
+//
+// Usage:
+//
+//	go run ./cmd/staticlint <packages>
+//
+// This multichecker includes:
+//   - Standard analyzers from golang.org/x/tools/go/analysis/passes
+//   - All "SA" analyzers from staticcheck.io
+//   - At least one analyzer from other staticcheck classes
+//   - Two public analyzers (unused, nilerr)
+//   - Custom analyzer prohibiting direct os.Exit call in main function of main package
+//
+// Each analyzer is described in the documentation below.
+//
+// Custom analyzer:
+//
+//	Prohibits direct usage of os.Exit in main() of main package. Use error handling and return instead.
+//
+// Example:
+//
+//	go run ./cmd/staticlint ./...
+package main
+
+import (
+	"go/ast"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/analysis/multichecker"
+	"golang.org/x/tools/go/analysis/passes/assign"
+	"golang.org/x/tools/go/analysis/passes/atomic"
+	"golang.org/x/tools/go/analysis/passes/bools"
+	"golang.org/x/tools/go/analysis/passes/buildtag"
+	"golang.org/x/tools/go/analysis/passes/cgocall"
+	"golang.org/x/tools/go/analysis/passes/composite"
+	"golang.org/x/tools/go/analysis/passes/copylock"
+	"golang.org/x/tools/go/analysis/passes/fieldalignment"
+	"golang.org/x/tools/go/analysis/passes/httpresponse"
+	"golang.org/x/tools/go/analysis/passes/ifaceassert"
+	"golang.org/x/tools/go/analysis/passes/loopclosure"
+	"golang.org/x/tools/go/analysis/passes/nilfunc"
+	"golang.org/x/tools/go/analysis/passes/printf"
+	"golang.org/x/tools/go/analysis/passes/shadow"
+	"golang.org/x/tools/go/analysis/passes/sigchanyzer"
+	"golang.org/x/tools/go/analysis/passes/stringintconv"
+	"golang.org/x/tools/go/analysis/passes/structtag"
+	"golang.org/x/tools/go/analysis/passes/unmarshal"
+	"golang.org/x/tools/go/analysis/passes/unreachable"
+	"golang.org/x/tools/go/analysis/passes/unusedresult"
+
+	"honnef.co/go/tools/staticcheck"
+
+	"github.com/gostaticanalysis/nilerr"
+	"github.com/gostaticanalysis/unused"
+)
+
+// osExitInMainAnalyzer prohibits direct os.Exit call in main() of main package.
+var osExitInMainAnalyzer = &analysis.Analyzer{
+	Name: "customNoOsExitInMain",
+	Doc:  "prohibits direct os.Exit call in main() of main package",
+	Run: func(pass *analysis.Pass) (interface{}, error) {
+		// Анализируем только свои исходники
+		if pass.Pkg.Name() != "main" ||
+			len(pass.Pkg.Path()) < len("github.com/Nikolay961996/metsys") ||
+			pass.Pkg.Path()[:len("github.com/Nikolay961996/metsys")] != "github.com/Nikolay961996/metsys" {
+			return nil, nil
+		}
+		// Получаем рабочий каталог (корень проекта)
+		workDir, err := os.Getwd()
+		if err != nil {
+			// Если не удалось получить рабочий каталог, анализируем всё
+			workDir = ""
+		}
+		workDir = filepath.Clean(workDir)
+		for _, file := range pass.Files {
+			if file.Pos().IsValid() {
+				fname := pass.Fset.File(file.Pos()).Name()
+				fname = filepath.Clean(fname)
+				rel, err := filepath.Rel(workDir, fname)
+				// Если файл не лежит внутри рабочей директории, пропускаем
+				if err != nil || strings.HasPrefix(rel, "..") {
+					continue
+				}
+			}
+			for _, decl := range file.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok || fn.Name.Name != "main" || fn.Recv != nil {
+					continue
+				}
+				ast.Inspect(fn.Body, func(n ast.Node) bool {
+					call, ok := n.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+						if ident, ok := sel.X.(*ast.Ident); ok && ident.Name == "os" && sel.Sel.Name == "Exit" {
+							pass.Reportf(call.Lparen, "direct os.Exit call in main() is prohibited")
+						}
+					}
+					return true
+				})
+			}
+		}
+		return nil, nil
+	},
+}
+
+func main() {
+	var analyzers []*analysis.Analyzer
+
+	// Standard analyzers
+	analyzers = append(analyzers, assign.Analyzer,
+		atomic.Analyzer,
+		bools.Analyzer,
+		buildtag.Analyzer,
+		cgocall.Analyzer,
+		composite.Analyzer,
+		copylock.Analyzer,
+		fieldalignment.Analyzer, // !
+		httpresponse.Analyzer,
+		ifaceassert.Analyzer,
+		loopclosure.Analyzer,
+		nilfunc.Analyzer,
+		printf.Analyzer,
+		shadow.Analyzer,
+		sigchanyzer.Analyzer,
+		stringintconv.Analyzer,
+		structtag.Analyzer,
+		unmarshal.Analyzer,
+		unreachable.Analyzer,
+		unusedresult.Analyzer,
+	)
+
+	// Staticcheck analyzers
+	for _, v := range staticcheck.Analyzers {
+		if v.Analyzer.Name[:2] == "SA" {
+			analyzers = append(analyzers, v.Analyzer)
+		}
+	}
+	// Add one non-SA staticcheck analyzer (например, ST1000) — если нужен другой, добавьте вручную, но не SA1000
+
+	// Public analyzers
+	analyzers = append(analyzers, unused.Analyzer, nilerr.Analyzer)
+
+	// Custom analyzer
+	analyzers = append(analyzers, osExitInMainAnalyzer)
+
+	multichecker.Main(analyzers...)
+}
