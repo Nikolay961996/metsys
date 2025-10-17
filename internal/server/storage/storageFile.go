@@ -1,3 +1,4 @@
+// Package storage file storage
 package storage
 
 import (
@@ -13,10 +14,9 @@ import (
 
 type FileStorage struct {
 	*MemStorage
-
-	isSyncSave    bool
 	saveTimer     *time.Ticker
 	savesFilePath string
+	isSyncSave    bool
 }
 
 func NewFileStorage(savesFile string, savePeriod time.Duration, restore bool) *FileStorage {

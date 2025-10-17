@@ -1,3 +1,4 @@
+// Package server consist server main entities
 package server
 
 import (

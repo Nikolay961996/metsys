@@ -1,3 +1,4 @@
+// Package router consist register routes with handlers
 package router
 
 import (

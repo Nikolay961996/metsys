@@ -1,3 +1,4 @@
+// Package server consist server main config entities
 package server
 
 import (
@@ -13,12 +14,13 @@ import (
 )
 
 type Config struct {
-	RunOnServerAddress string
-	StoreInterval      time.Duration
-	FileStoragePath    string
-	Restore            bool
-	DatabaseDSN        string
-	KeyForSigning      string
+	RunOnServerAddress string        // 16 bytes
+	FileStoragePath    string        // 16 bytes
+	DatabaseDSN        string        // 16 bytes
+	KeyForSigning      string        // 16 bytes
+	StoreInterval      time.Duration // 8 bytes
+	Restore            bool          // 1 byte
+	// 7 bytes padding
 }
 
 func DefaultConfig() Config {
@@ -60,12 +62,12 @@ func (c *Config) flags() {
 
 func (c *Config) envs() {
 	var configEnv struct {
-		Address         string `env:"ADDRESS"`
-		StoreInterval   int    `env:"STORE_INTERVAL"`
-		FileStoragePath string `env:"FILE_STORAGE_PATH"`
 		Restore         *bool  `env:"RESTORE"`
+		FileStoragePath string `env:"FILE_STORAGE_PATH"`
 		DatabaseDSN     string `env:"DATABASE_DSN"`
+		Address         string `env:"ADDRESS"`
 		KeyForSigning   string `env:"KEY"`
+		StoreInterval   int32  `env:"STORE_INTERVAL"`
 	}
 	err := env.Parse(&configEnv)
 	if err != nil {
