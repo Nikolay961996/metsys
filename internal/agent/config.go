@@ -19,10 +19,10 @@ import (
 type Config struct {
 	SendToServerAddress  string        // server address for reporting
 	KeyForSigning        string        // private key for signing
+	CryptoKey            string        // key for encrypt (public key of server)
 	PollInterval         time.Duration // poll time period
 	ReportInterval       time.Duration // report time period
 	SendMetricsRateLimit int           // send metrics rate limit
-	CryptoKey            string        // key for encrypt (public key of server)
 }
 
 // DefaultConfig default config
@@ -73,10 +73,10 @@ func (c *Config) envs() {
 	var configEnv struct {
 		Address        string `env:"ADDRESS"`
 		KeyForSigning  string `env:"KEY"`
+		CryptoKey      string `env:"CRYPTO_KEY"`
 		ReportInterval int    `env:"REPORT_INTERVAL"`
 		PollInterval   int    `env:"POLL_INTERVAL"`
 		SendRateLimit  int    `env:"RATE_LIMIT"`
-		CryptoKey      string `env:"CRYPTO_KEY"`
 	}
 	err := env.Parse(&configEnv)
 	if err != nil {

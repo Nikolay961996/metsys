@@ -1,4 +1,4 @@
-// Package models functions for retries and other utils
+// Package utils functions for retries and other utils
 package utils
 
 import (

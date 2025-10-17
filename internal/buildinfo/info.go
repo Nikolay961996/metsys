@@ -1,3 +1,4 @@
+// Package buildinfo contains common info about program
 package buildinfo
 
 import "fmt"

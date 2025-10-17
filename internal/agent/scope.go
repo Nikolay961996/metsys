@@ -140,11 +140,16 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 	}
 
 	sign := createSign(jsonData, keyForSigning)
-	encryptedData, err := crypto.EncryptMessageWithPublicKey(jsonData, publicKey)
-	if err != nil {
-		return fmt.Errorf("error encrypting metrics: %s", err.Error())
+	var result []byte
+	if publicKey != nil {
+		encryptedData, e := crypto.EncryptMessageWithPublicKey(jsonData, publicKey)
+		if e != nil {
+			return fmt.Errorf("error encrypting metrics: %s", e.Error())
+		}
+		result = encryptedData
 	}
-	compressedBody, err := compressToGzip(encryptedData)
+
+	compressedBody, err := compressToGzip(result)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
 	}

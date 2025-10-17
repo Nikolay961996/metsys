@@ -20,9 +20,9 @@ type Config struct {
 	FileStoragePath    string        // file storage path
 	DatabaseDSN        string        // database connection string
 	KeyForSigning      string        // key for sign
+	CryptoKey          string        // key for decrypt (private key of server)
 	StoreInterval      time.Duration // interval for stor
 	Restore            bool          // need restore
-	CryptoKey          string        // key for decrypt (private key of server)
 }
 
 func DefaultConfig() Config {
@@ -75,8 +75,8 @@ func (c *Config) envs() {
 		DatabaseDSN     string `env:"DATABASE_DSN"`
 		Address         string `env:"ADDRESS"`
 		KeyForSigning   string `env:"KEY"`
-		StoreInterval   int32  `env:"STORE_INTERVAL"`
 		CryptoKey       string `env:"CRYPTO_KEY"`
+		StoreInterval   int32  `env:"STORE_INTERVAL"`
 	}
 	err := env.Parse(&configEnv)
 	if err != nil {
