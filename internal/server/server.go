@@ -2,7 +2,7 @@
 package server
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/Nikolay961996/metsys/internal/crypto"
@@ -33,7 +33,7 @@ func InitServer(c *Config) MetricServer {
 func (s *MetricServer) Run(runOnServerAddress string, keyForSigning string, cryptoKey string) {
 	privateKey, err := crypto.ParseRSAPrivateKeyPEM(cryptoKey)
 	if err != nil {
-		panic(errors.New("error parsing private key"))
+		panic(fmt.Errorf("error parsing private key: %v", err))
 	}
 	err = http.ListenAndServe(runOnServerAddress, router.MetricsRouterWithServer(s.Storage, keyForSigning, privateKey))
 	if err != nil {

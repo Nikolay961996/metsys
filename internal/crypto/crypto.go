@@ -54,27 +54,29 @@ func ParseRSAPrivateKeyPEM(filename string) (*rsa.PrivateKey, error) {
 
 	block, _ := pem.Decode(pemData)
 	if block == nil {
-		return nil, fmt.Errorf("cannot decode PEM block")
+		return nil, fmt.Errorf("cant't decode PEM block")
 	}
 
-	switch block.Type {
-	case "RSA PRIVATE KEY":
-		// PKCS1
-		return x509.ParsePKCS1PrivateKey(block.Bytes)
-	case "PRIVATE KEY":
-		// PKCS8
-		p, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if block.Type == "RSA PRIVATE KEY" || block.Type == "PRIVATE KEY" {
+		// try PKCS8
+		privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing PKCS8 private key: %v", err)
+			//try PKCS1
+			privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, fmt.Errorf("cannt parse key (no PKCS1, no PKCS8): %v", err)
+			}
+			return privateKey, nil
 		}
-		rsaP, ok := p.(*rsa.PrivateKey)
+
+		rsaPrivateKey, ok := privateKey.(*rsa.PrivateKey)
 		if !ok {
-			return nil, fmt.Errorf("key in PKCS8 container is not RSA private key")
+			return nil, fmt.Errorf("is not RSA private key")
 		}
-		return rsaP, nil
-	default:
-		return nil, fmt.Errorf("unsupporter type PEM block for private key: %s", block.Type)
+		return rsaPrivateKey, nil
 	}
+
+	return nil, fmt.Errorf("unsupported PEM block type: %s", block.Type)
 }
 
 // EncryptMessageWithPublicKey encrypt message with public RSA key
