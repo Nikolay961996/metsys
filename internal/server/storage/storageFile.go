@@ -10,6 +10,7 @@ import (
 
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/models"
+	"github.com/Nikolay961996/metsys/utils"
 )
 
 type FileStorage struct {
@@ -113,7 +114,7 @@ func (m *FileStorage) tryFlushToFile() {
 		return nil
 	}
 
-	err := models.Retryer(
+	err := utils.Retryer(
 		flushFunc,
 		os.ErrPermission,
 	)

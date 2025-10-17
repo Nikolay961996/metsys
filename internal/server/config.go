@@ -2,11 +2,13 @@
 package server
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/Nikolay961996/metsys/utils"
 	"github.com/caarlos0/env/v6"
 	"go.uber.org/zap"
 
@@ -14,13 +16,13 @@ import (
 )
 
 type Config struct {
-	RunOnServerAddress string        // 16 bytes
-	FileStoragePath    string        // 16 bytes
-	DatabaseDSN        string        // 16 bytes
-	KeyForSigning      string        // 16 bytes
-	StoreInterval      time.Duration // 8 bytes
-	Restore            bool          // 1 byte
-	// 7 bytes padding
+	RunOnServerAddress string        // server address
+	FileStoragePath    string        // file storage path
+	DatabaseDSN        string        // database connection string
+	KeyForSigning      string        // key for sign
+	CryptoKey          string        // key for decrypt (private key of server)
+	StoreInterval      time.Duration // interval for stor
+	Restore            bool          // need restore
 }
 
 func DefaultConfig() Config {
@@ -31,12 +33,17 @@ func DefaultConfig() Config {
 		Restore:            false,
 		DatabaseDSN:        "",
 		KeyForSigning:      "",
+		CryptoKey:          "",
 	}
 }
 
 func (c *Config) Parse() {
 	c.flags()
 	c.envs()
+
+	if !utils.FileExists(c.CryptoKey) {
+		panic(errors.New("CryptoKey file not found"))
+	}
 
 	models.Log.Info("Server run on",
 		zap.String("address", c.RunOnServerAddress))
@@ -49,6 +56,7 @@ func (c *Config) flags() {
 	flag.BoolVar(&c.Restore, "r", c.Restore, "restore save on start")
 	flag.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "database connection string")
 	flag.StringVar(&c.KeyForSigning, "k", c.KeyForSigning, "key for signing")
+	flag.StringVar(&c.CryptoKey, "crypto-key", c.CryptoKey, "Key for decryption")
 
 	flag.Parse()
 
@@ -67,6 +75,7 @@ func (c *Config) envs() {
 		DatabaseDSN     string `env:"DATABASE_DSN"`
 		Address         string `env:"ADDRESS"`
 		KeyForSigning   string `env:"KEY"`
+		CryptoKey       string `env:"CRYPTO_KEY"`
 		StoreInterval   int32  `env:"STORE_INTERVAL"`
 	}
 	err := env.Parse(&configEnv)
@@ -91,5 +100,8 @@ func (c *Config) envs() {
 	}
 	if configEnv.KeyForSigning != "" {
 		c.KeyForSigning = configEnv.KeyForSigning
+	}
+	if configEnv.CryptoKey != "" {
+		c.CryptoKey = configEnv.CryptoKey
 	}
 }

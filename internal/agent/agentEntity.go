@@ -3,8 +3,10 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/Nikolay961996/metsys/internal/crypto"
 	"github.com/Nikolay961996/metsys/models"
 )
 
@@ -27,11 +29,16 @@ func InitAgent() Entity {
 
 // Run agent
 func (a *Entity) Run(config *Config) {
+	publicKey, err := crypto.ParseRSAPublicKeyPEM(config.CryptoKey)
+	if err != nil {
+		panic(errors.New("parse RSA public key failed"))
+	}
+
 	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
 	newMetricsChan := runPollWorker(config.PollInterval, a.doneCtx)
 	newGopsutilMetricsChan := runPollGopsutilWorker(config.PollInterval, a.doneCtx)
 	for i := 0; i < config.SendMetricsRateLimit; i++ {
-		go runReportWorker(i, a.doneCtx, jobsChan, config.SendToServerAddress, config.KeyForSigning)
+		go runReportWorker(i, a.doneCtx, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey)
 	}
 
 	listenMetricsAndFadeOut(a.doneCtx, config.ReportInterval, newMetricsChan, newGopsutilMetricsChan, jobsChan)
