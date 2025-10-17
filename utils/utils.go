@@ -1,19 +1,22 @@
-// Package models functions for retries
-package models
+// Package models functions for retries and other utils
+package utils
 
 import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 	"time"
+
+	"github.com/Nikolay961996/metsys/models"
 )
 
 // Retryer special function for expenecial back-off with error types
 func Retryer(f func() error, retryableError ...error) error {
 	// 1.2...3.....4x
 	tryStep := 1
-	for tryStep <= MaxErrRetryCount {
-		Log.Error(fmt.Sprintf("Unknown flags: %v\n", flag.Args()))
+	for tryStep <= models.MaxErrRetryCount {
+		models.Log.Error(fmt.Sprintf("Unknown flags: %v\n", flag.Args()))
 		err := f()
 		if err == nil {
 			return nil
@@ -43,12 +46,12 @@ func Retryer(f func() error, retryableError ...error) error {
 func RetryerCon(f func() error, isRetryable func(error) bool) error {
 	// 1.2...3.....4x
 	tryStep := 1
-	for tryStep <= MaxErrRetryCount {
+	for tryStep <= models.MaxErrRetryCount {
 		err := f()
 		if err == nil {
 			return nil
 		}
-		Log.Warn(fmt.Sprintf("retry step: %d", tryStep))
+		models.Log.Warn(fmt.Sprintf("retry step: %d", tryStep))
 		if !isRetryable(err) || tryStep == 4 {
 			return err
 		}
@@ -57,4 +60,12 @@ func RetryerCon(f func() error, isRetryable func(error) bool) error {
 	}
 
 	return nil
+}
+
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }

@@ -2,12 +2,14 @@
 package agent
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/Nikolay961996/metsys/utils"
 	"github.com/caarlos0/env/v6"
 
 	"github.com/Nikolay961996/metsys/models"
@@ -20,6 +22,7 @@ type Config struct {
 	PollInterval         time.Duration // poll time period
 	ReportInterval       time.Duration // report time period
 	SendMetricsRateLimit int           // send metrics rate limit
+	CryptoKey            string        // key for encrypt (public key of server)
 }
 
 // DefaultConfig default config
@@ -30,6 +33,7 @@ func DefaultConfig() Config {
 		ReportInterval:       10 * time.Second,        // report to server interval
 		KeyForSigning:        "",                      // private key for singing
 		SendMetricsRateLimit: 1,                       // rate limit for parallel sending to server
+		CryptoKey:            "",                      // key for encrypt (public key of server)
 	}
 }
 
@@ -38,6 +42,9 @@ func (c *Config) Parse() {
 	c.flags()
 	c.envs()
 	models.Log.Info(fmt.Sprintf("Send to %s", c.SendToServerAddress))
+	if !utils.FileExists(c.CryptoKey) {
+		panic(errors.New("CryptoKey file not found"))
+	}
 }
 
 func (c *Config) flags() {
@@ -46,6 +53,7 @@ func (c *Config) flags() {
 	p := flag.Int("p", 2, "PollInterval in seconds")
 	k := flag.String("k", "", "Key for signing")
 	l := flag.Int("l", 1, "Rate limit to sending server")
+	cryptoKey := flag.String("crypto-key", "", "Key for encryption")
 	flag.Parse()
 
 	if flag.NArg() > 0 {
@@ -58,6 +66,7 @@ func (c *Config) flags() {
 	c.PollInterval = time.Duration(*p) * time.Second
 	c.KeyForSigning = *k
 	c.SendMetricsRateLimit = *l
+	c.CryptoKey = *cryptoKey
 }
 
 func (c *Config) envs() {
@@ -67,6 +76,7 @@ func (c *Config) envs() {
 		ReportInterval int    `env:"REPORT_INTERVAL"`
 		PollInterval   int    `env:"POLL_INTERVAL"`
 		SendRateLimit  int    `env:"RATE_LIMIT"`
+		CryptoKey      string `env:"CRYPTO_KEY"`
 	}
 	err := env.Parse(&configEnv)
 	if err != nil {
@@ -87,6 +97,9 @@ func (c *Config) envs() {
 	}
 	if configEnv.SendRateLimit != 0 {
 		c.SendMetricsRateLimit = configEnv.SendRateLimit
+	}
+	if configEnv.CryptoKey != "" {
+		c.CryptoKey = configEnv.CryptoKey
 	}
 }
 

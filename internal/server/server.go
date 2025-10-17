@@ -2,8 +2,10 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 
+	"github.com/Nikolay961996/metsys/internal/crypto"
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
 	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
@@ -20,7 +22,7 @@ func InitServer(c *Config) MetricServer {
 	if c.DatabaseDSN != "" {
 		a.Storage = storage.NewDBStorage(c.DatabaseDSN)
 	} else if c.FileStoragePath != "" {
-		a.Storage = storage.NewFileStorage(c.FileStoragePath, c.StoreInterval, c.Restore) // c.FileStoragePath, c.StoreInterval == 0, c.Restore
+		a.Storage = storage.NewFileStorage(c.FileStoragePath, c.StoreInterval, c.Restore)
 	} else {
 		a.Storage = storage.NewMemStorage()
 	}
@@ -28,8 +30,12 @@ func InitServer(c *Config) MetricServer {
 	return a
 }
 
-func (s *MetricServer) Run(runOnServerAddress string, keyForSigning string) {
-	err := http.ListenAndServe(runOnServerAddress, router.MetricsRouterWithServer(s.Storage, keyForSigning))
+func (s *MetricServer) Run(runOnServerAddress string, keyForSigning string, cryptoKey string) {
+	privateKey, err := crypto.ParseRSAPrivateKeyPEM(cryptoKey)
+	if err != nil {
+		panic(errors.New("error parsing private key"))
+	}
+	err = http.ListenAndServe(runOnServerAddress, router.MetricsRouterWithServer(s.Storage, keyForSigning, privateKey))
 	if err != nil {
 		models.Log.Error(err.Error())
 	}

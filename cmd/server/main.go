@@ -17,6 +17,6 @@ func main() {
 	c := server.DefaultConfig()
 	c.Parse()
 	entity := server.InitServer(&c)
-	entity.Run(c.RunOnServerAddress, c.KeyForSigning)
+	entity.Run(c.RunOnServerAddress, c.KeyForSigning, c.CryptoKey)
 	defer entity.Stop()
 }

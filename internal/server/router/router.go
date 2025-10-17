@@ -2,6 +2,7 @@
 package router
 
 import (
+	"crypto/rsa"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -13,14 +14,15 @@ import (
 func MetricsRouterTest() *chi.Mux {
 	s := storage.NewFileStorage("/local.db", 5*time.Second, false)
 
-	return MetricsRouterWithServer(s, "")
+	return MetricsRouterWithServer(s, "", nil)
 }
 
-func MetricsRouterWithServer(s repositories.Storage, keyForSigning string) *chi.Mux {
+func MetricsRouterWithServer(s repositories.Storage, keyForSigning string, privateKey *rsa.PrivateKey) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(
 		WithDecompressionRequest,
 		WithLogger,
+		WithDecrypt(privateKey),
 		WithSigningCheck(keyForSigning),
 		WithSigningResponse(keyForSigning))
 
