@@ -2,6 +2,7 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,13 +17,15 @@ import (
 )
 
 type Config struct {
-	RunOnServerAddress string        // server address
-	FileStoragePath    string        // file storage path
-	DatabaseDSN        string        // database connection string
+	RunOnServerAddress string        `json:"address"`      // server address
+	FileStoragePath    string        `json:"store_file"`   // file storage path
+	DatabaseDSN        string        `json:"database_dsn"` // database connection string
 	KeyForSigning      string        // key for sign
-	CryptoKey          string        // key for decrypt (private key of server)
+	CryptoKey          string        `json:"crypto_key"` // key for decrypt (private key of server)
+	ConfigFile         string        // json config
+	StoreIntervalStr   string        `json:"store_interval"` // interval for stor
 	StoreInterval      time.Duration // interval for stor
-	Restore            bool          // need restore
+	Restore            bool          `json:"restore"` // need restore
 }
 
 func DefaultConfig() Config {
@@ -34,12 +37,14 @@ func DefaultConfig() Config {
 		DatabaseDSN:        "",
 		KeyForSigning:      "",
 		CryptoKey:          "",
+		ConfigFile:         "",
 	}
 }
 
 func (c *Config) Parse() {
 	c.flags()
 	c.envs()
+	c.jsonConfig()
 
 	if !utils.FileExists(c.CryptoKey) {
 		panic(errors.New("CryptoKey file not found"))
@@ -56,7 +61,8 @@ func (c *Config) flags() {
 	flag.BoolVar(&c.Restore, "r", c.Restore, "restore save on start")
 	flag.StringVar(&c.DatabaseDSN, "d", c.DatabaseDSN, "database connection string")
 	flag.StringVar(&c.KeyForSigning, "k", c.KeyForSigning, "key for signing")
-	flag.StringVar(&c.CryptoKey, "crypto-key", c.CryptoKey, "Key for decryption")
+	flag.StringVar(&c.CryptoKey, "crypto-key", c.CryptoKey, "key for decryption")
+	flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "json config")
 
 	flag.Parse()
 
@@ -76,6 +82,7 @@ func (c *Config) envs() {
 		Address         string `env:"ADDRESS"`
 		KeyForSigning   string `env:"KEY"`
 		CryptoKey       string `env:"CRYPTO_KEY"`
+		ConfigFile      string `env:"CONFIG"`
 		StoreInterval   int32  `env:"STORE_INTERVAL"`
 	}
 	err := env.Parse(&configEnv)
@@ -103,5 +110,47 @@ func (c *Config) envs() {
 	}
 	if configEnv.CryptoKey != "" {
 		c.CryptoKey = configEnv.CryptoKey
+	}
+	if configEnv.ConfigFile != "" {
+		c.ConfigFile = configEnv.ConfigFile
+	}
+}
+
+func (c *Config) jsonConfig() {
+	if c.ConfigFile == "" {
+		return
+	}
+
+	d, err := os.ReadFile(c.ConfigFile)
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("read config file error: %v", err))
+		return
+	}
+
+	var parsed Config
+	err = json.Unmarshal(d, &parsed)
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("parse config file error: %v", err))
+		return
+	}
+
+	defConfig := DefaultConfig()
+	if c.RunOnServerAddress == defConfig.RunOnServerAddress {
+		c.RunOnServerAddress = parsed.RunOnServerAddress
+	}
+	if c.FileStoragePath == defConfig.FileStoragePath {
+		c.FileStoragePath = parsed.FileStoragePath
+	}
+	if c.DatabaseDSN == defConfig.DatabaseDSN {
+		c.DatabaseDSN = parsed.DatabaseDSN
+	}
+	if c.CryptoKey == defConfig.CryptoKey {
+		c.CryptoKey = parsed.CryptoKey
+	}
+	if c.StoreInterval == defConfig.StoreInterval && parsed.StoreIntervalStr != "" {
+		utils.TryParseDuration(&c.StoreInterval, parsed.StoreIntervalStr)
+	}
+	if c.Restore == defConfig.Restore {
+		c.Restore = parsed.Restore
 	}
 }

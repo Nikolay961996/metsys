@@ -69,3 +69,12 @@ func FileExists(filename string) bool {
 	}
 	return !info.IsDir()
 }
+
+func TryParseDuration(d *time.Duration, s string) {
+	duration, err := time.ParseDuration(s)
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("invalid parse duration: %v", err))
+	} else {
+		*d = duration
+	}
+}

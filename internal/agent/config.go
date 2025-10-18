@@ -2,6 +2,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -17,9 +18,12 @@ import (
 
 // Config for agent
 type Config struct {
-	SendToServerAddress  string        // server address for reporting
+	SendToServerAddress  string        `json:"address"` // server address for reporting
 	KeyForSigning        string        // private key for signing
-	CryptoKey            string        // key for encrypt (public key of server)
+	CryptoKey            string        `json:"crypto_key"` // key for encrypt (public key of server)
+	ConfigFile           string        // json config
+	ReportIntervalStr    string        `json:"report_interval"`
+	PollIntervalStr      string        `json:"poll_interval"`
 	PollInterval         time.Duration // poll time period
 	ReportInterval       time.Duration // report time period
 	SendMetricsRateLimit int           // send metrics rate limit
@@ -34,6 +38,7 @@ func DefaultConfig() Config {
 		KeyForSigning:        "",                      // private key for singing
 		SendMetricsRateLimit: 1,                       // rate limit for parallel sending to server
 		CryptoKey:            "",                      // key for encrypt (public key of server)
+		ConfigFile:           "",                      // json config
 	}
 }
 
@@ -41,6 +46,8 @@ func DefaultConfig() Config {
 func (c *Config) Parse() {
 	c.flags()
 	c.envs()
+	c.jsonConfig()
+
 	models.Log.Info(fmt.Sprintf("Send to %s", c.SendToServerAddress))
 	if !utils.FileExists(c.CryptoKey) {
 		panic(errors.New("CryptoKey file not found"))
@@ -48,12 +55,14 @@ func (c *Config) Parse() {
 }
 
 func (c *Config) flags() {
-	flag.StringVar(&c.SendToServerAddress, "a", "http://localhost:8080", "Metsys server address ip:port")
-	r := flag.Int("r", 10, "ReportInterval in seconds")
-	p := flag.Int("p", 2, "PollInterval in seconds")
-	k := flag.String("k", "", "Key for signing")
-	l := flag.Int("l", 1, "Rate limit to sending server")
-	cryptoKey := flag.String("crypto-key", "", "Key for encryption")
+	flag.StringVar(&c.SendToServerAddress, "a", "http://localhost:8080", "metsys server address ip:port")
+	r := flag.Int("r", 10, "reportInterval in seconds")
+	p := flag.Int("p", 2, "pollInterval in seconds")
+	flag.StringVar(&c.KeyForSigning, "k", "", "key for signing")
+	flag.IntVar(&c.SendMetricsRateLimit, "l", 1, "rate limit to sending server")
+	flag.StringVar(&c.CryptoKey, "crypto-key", "", "key for encryption")
+	flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "json config")
+
 	flag.Parse()
 
 	if flag.NArg() > 0 {
@@ -64,9 +73,6 @@ func (c *Config) flags() {
 	c.SendToServerAddress = c.fixProtocolPrefixAddress(c.SendToServerAddress)
 	c.ReportInterval = time.Duration(*r) * time.Second
 	c.PollInterval = time.Duration(*p) * time.Second
-	c.KeyForSigning = *k
-	c.SendMetricsRateLimit = *l
-	c.CryptoKey = *cryptoKey
 }
 
 func (c *Config) envs() {
@@ -74,6 +80,7 @@ func (c *Config) envs() {
 		Address        string `env:"ADDRESS"`
 		KeyForSigning  string `env:"KEY"`
 		CryptoKey      string `env:"CRYPTO_KEY"`
+		ConfigFile     string `env:"CONFIG"`
 		ReportInterval int    `env:"REPORT_INTERVAL"`
 		PollInterval   int    `env:"POLL_INTERVAL"`
 		SendRateLimit  int    `env:"RATE_LIMIT"`
@@ -101,6 +108,9 @@ func (c *Config) envs() {
 	if configEnv.CryptoKey != "" {
 		c.CryptoKey = configEnv.CryptoKey
 	}
+	if configEnv.ConfigFile != "" {
+		c.ConfigFile = configEnv.ConfigFile
+	}
 }
 
 func (c *Config) fixProtocolPrefixAddress(addr string) string {
@@ -110,4 +120,40 @@ func (c *Config) fixProtocolPrefixAddress(addr string) string {
 	addr = strings.TrimRight(addr, "/")
 
 	return addr
+}
+
+func (c *Config) jsonConfig() {
+	if c.ConfigFile == "" {
+		return
+	}
+
+	d, err := os.ReadFile(c.ConfigFile)
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("read config file error: %v", err))
+		return
+	}
+
+	var parsed Config
+	err = json.Unmarshal(d, &parsed)
+	if err != nil {
+		models.Log.Error(fmt.Sprintf("parse config file error: %v", err))
+		return
+	}
+
+	defConfig := DefaultConfig()
+	if c.SendToServerAddress == defConfig.SendToServerAddress {
+		c.SendToServerAddress = parsed.SendToServerAddress
+	}
+	if c.CryptoKey == defConfig.CryptoKey {
+		c.CryptoKey = parsed.CryptoKey
+	}
+	if c.CryptoKey == defConfig.CryptoKey {
+		c.CryptoKey = parsed.CryptoKey
+	}
+	if c.ReportInterval == defConfig.ReportInterval && parsed.ReportIntervalStr != "" {
+		utils.TryParseDuration(&c.ReportInterval, parsed.ReportIntervalStr)
+	}
+	if c.PollInterval == defConfig.PollInterval && parsed.PollIntervalStr != "" {
+		utils.TryParseDuration(&c.PollInterval, parsed.PollIntervalStr)
+	}
 }
