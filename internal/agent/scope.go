@@ -147,6 +147,9 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 			return fmt.Errorf("error encrypting metrics: %s", e.Error())
 		}
 		result = encryptedData
+	} else {
+		// no encryption: send raw json
+		result = jsonData
 	}
 
 	compressedBody, err := compressToGzip(result)
