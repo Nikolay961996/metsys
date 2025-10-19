@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/hmac"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -14,6 +15,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/Nikolay961996/metsys/internal/crypto"
+	"github.com/Nikolay961996/metsys/utils"
 	"github.com/go-resty/resty/v2"
 
 	"github.com/Nikolay961996/metsys/models"
@@ -30,10 +33,10 @@ func (e *HTTPStatusError) Error() string {
 }
 
 // Report to server
-func Report(metrics models.Metrics, serverAddress string, keyForSigning string) error {
+func Report(metrics models.Metrics, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey) error {
 	client := resty.New()
 	url := fmt.Sprintf("%s/update/", serverAddress)
-	return sendToServer(client, url, &metrics, keyForSigning)
+	return sendToServer(client, url, &metrics, keyForSigning, publicKey)
 }
 
 func createMetricsArray(metrics *Metrics) []models.Metrics {
@@ -127,7 +130,7 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 	return mr
 }
 
-func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics, keyForSigning string) error {
+func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics, keyForSigning string, publicKey *rsa.PublicKey) error {
 	models.Log.Info("Sending metrics to " + serverURL)
 	models.Log.Info("data: " + fmt.Sprintf("%v", metrics))
 
@@ -136,14 +139,20 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 		return fmt.Errorf("error marshaling metrics: %s", err.Error())
 	}
 
-	var sign []byte
-	if keyForSigning != "" {
-		h := hmac.New(sha256.New, []byte(keyForSigning))
-		h.Write(jsonData)
-		sign = h.Sum(nil)
+	sign := createSign(jsonData, keyForSigning)
+	var result []byte
+	if publicKey != nil {
+		encryptedData, e := crypto.EncryptMessageWithPublicKey(jsonData, publicKey)
+		if e != nil {
+			return fmt.Errorf("error encrypting metrics: %s", e.Error())
+		}
+		result = encryptedData
+	} else {
+		// no encryption: send raw json
+		result = jsonData
 	}
 
-	compressedBody, err := compressToGzip(jsonData)
+	compressedBody, err := compressToGzip(result)
 	if err != nil {
 		return fmt.Errorf("error compressing metrics: %s", err.Error())
 	}
@@ -158,7 +167,7 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 	}
 
 	var resp *resty.Response
-	err = models.RetryerCon(
+	err = utils.RetryerCon(
 		func() error {
 			r, e := request.Post(serverURL)
 			if e == nil {
@@ -206,4 +215,13 @@ func compressToGzip(metrics []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error closing gzip writer: %s", err.Error())
 	}
 	return buf.Bytes(), nil
+}
+
+func createSign(jsonData []byte, keyForSigning string) []byte {
+	if keyForSigning != "" {
+		h := hmac.New(sha256.New, []byte(keyForSigning))
+		h.Write(jsonData)
+		return h.Sum(nil)
+	}
+	return nil
 }

@@ -11,11 +11,11 @@ import (
 
 // TestShouldRetryDBError тестирует логику определения повторных попыток
 func TestShouldRetryDBError(t *testing.T) {
-       tests := []struct {
-	       err      error
-	       name     string
-	       expected bool
-       }{
+	tests := []struct {
+		err      error
+		name     string
+		expected bool
+	}{
 		{
 			name:     "Nil error",
 			err:      nil,
