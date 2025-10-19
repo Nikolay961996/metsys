@@ -37,7 +37,7 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	srv := runBackground()
-	gracefulShutdown(&a, srv, sigCh)
+	gracefulShutdown(a, srv, sigCh)
 }
 
 func runBackground() *http.Server {

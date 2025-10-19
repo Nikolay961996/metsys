@@ -20,14 +20,14 @@ type Entity struct {
 }
 
 // InitAgent creating new agent entity
-func InitAgent() Entity {
+func InitAgent() *Entity {
 	ctx, c := context.WithCancel(context.Background())
 	a := Entity{
 		doneCtx: ctx,
 		cancel:  c,
 	}
 
-	return a
+	return &a
 }
 
 // Run agent
