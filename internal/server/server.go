@@ -2,8 +2,11 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Nikolay961996/metsys/internal/crypto"
 	"github.com/Nikolay961996/metsys/internal/server/repositories"
@@ -14,6 +17,7 @@ import (
 
 type MetricServer struct {
 	Storage repositories.Storage
+	srv     *http.Server
 }
 
 func InitServer(c *Config) MetricServer {
@@ -35,13 +39,33 @@ func (s *MetricServer) Run(runOnServerAddress string, keyForSigning string, cryp
 	if err != nil {
 		panic(fmt.Errorf("error parsing private key: %v", err))
 	}
-	err = http.ListenAndServe(runOnServerAddress, router.MetricsRouterWithServer(s.Storage, keyForSigning, privateKey))
-	if err != nil {
-		models.Log.Error(err.Error())
+
+	handler := router.MetricsRouterWithServer(s.Storage, keyForSigning, privateKey)
+	s.srv = &http.Server{
+		Addr:    runOnServerAddress,
+		Handler: handler,
 	}
+
+	runBackground(s)
 }
 
-func (s *MetricServer) Stop() {
+// Stop gracefully shuts down the HTTP server and closes storage
+func (s *MetricServer) Stop(timeout time.Duration) {
 	models.Log.Warn("Server shutting down")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if s.srv != nil {
+		if err := s.srv.Shutdown(ctx); err != nil {
+			models.Log.Error("server shutdown error: " + err.Error())
+		}
+	}
 	s.Storage.Close()
+}
+
+func runBackground(s *MetricServer) {
+	go func() {
+		if err := s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			models.Log.Error("listen error: " + err.Error())
+		}
+	}()
 }
