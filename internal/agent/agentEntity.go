@@ -4,6 +4,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/Nikolay961996/metsys/internal/crypto"
@@ -12,8 +13,10 @@ import (
 
 // Entity for agent
 type Entity struct {
-	doneCtx context.Context    // for cancel
-	cancel  context.CancelFunc // for call cancel
+	doneCtx  context.Context    // for cancel
+	cancel   context.CancelFunc // for call cancel
+	jobsChan chan workerJob
+	wg       sync.WaitGroup
 }
 
 // InitAgent creating new agent entity
@@ -35,13 +38,22 @@ func (a *Entity) Run(config *Config) {
 	}
 
 	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
+	a.jobsChan = jobsChan
+
 	newMetricsChan := runPollWorker(config.PollInterval, a.doneCtx)
 	newGopsutilMetricsChan := runPollGopsutilWorker(config.PollInterval, a.doneCtx)
+
 	for i := 0; i < config.SendMetricsRateLimit; i++ {
-		go runReportWorker(i, a.doneCtx, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey)
+		a.wg.Add(1)
+		go func(id int) {
+			defer a.wg.Done()
+			runReportWorker(id, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey)
+		}(i)
 	}
 
 	listenMetricsAndFadeOut(a.doneCtx, config.ReportInterval, newMetricsChan, newGopsutilMetricsChan, jobsChan)
+
+	a.wg.Wait()
 }
 
 // Stop agent
@@ -54,6 +66,18 @@ func listenMetricsAndFadeOut(doneCtx context.Context, period time.Duration, metr
 	defer ticker.Stop()
 	var metrics Metrics
 	var gopsutilMetrics MetricsGopsutil
+
+	defer func() {
+		metricsArray := createMetricsArray(&metrics)
+		for _, m := range metricsArray {
+			jobsChan <- workerJob{oneMetrics: m}
+		}
+		gMetricsArray := createGopsutilMetricsArray(&gopsutilMetrics)
+		for _, m := range gMetricsArray {
+			jobsChan <- workerJob{oneMetrics: m}
+		}
+		close(jobsChan)
+	}()
 
 	for {
 		select {
