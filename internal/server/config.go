@@ -24,9 +24,9 @@ type Config struct {
 	CryptoKey          string        `json:"crypto_key"` // key for decrypt (private key of server)
 	ConfigFile         string        // json config
 	StoreIntervalStr   string        `json:"store_interval"` // interval for stor
-	StoreInterval      time.Duration // interval for stor
-	Restore            bool          `json:"restore"`        // need restore
 	TrustedSubnet      string        `json:"trusted_subnet"` // trusted subnet in CIDR format
+	StoreInterval      time.Duration // interval for stor
+	Restore            bool          `json:"restore"` // need restore
 }
 
 func DefaultConfig() Config {
@@ -85,8 +85,8 @@ func (c *Config) envs() {
 		KeyForSigning   string `env:"KEY"`
 		CryptoKey       string `env:"CRYPTO_KEY"`
 		ConfigFile      string `env:"CONFIG"`
-		StoreInterval   int32  `env:"STORE_INTERVAL"`
 		TrustedSubnet   string `env:"TRUSTED_SUBNET"`
+		StoreInterval   int32  `env:"STORE_INTERVAL"`
 	}
 
 	err := env.Parse(&configEnv)
