@@ -2,18 +2,18 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/Nikolay961996/metsys/internal/agent"
+	"github.com/Nikolay961996/metsys/internal/buildinfo"
 	"github.com/Nikolay961996/metsys/models"
-)
-
-var (
-	buildVersion string
-	buildDate    string
-	buildCommit  string
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 )
 
 func main() {
-	printHello()
+	buildinfo.PrintHello()
 	err := models.Initialize("info")
 	if err != nil {
 		panic(err)
@@ -33,23 +33,30 @@ func main() {
 	a := agent.InitAgent()
 	go a.Run(&c)
 
-	defer a.Stop()
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	err = http.ListenAndServe(addr, nil)
-	if err != nil {
+	srv := runBackground()
+	gracefulShutdown(a, srv, sigCh)
+}
+
+func runBackground() *http.Server {
+	srv := &http.Server{Addr: addr}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			panic(err)
+		}
+	}()
+	return srv
+}
+
+func gracefulShutdown(a *agent.Entity, srv *http.Server, sigCh <-chan os.Signal) {
+	<-sigCh
+	a.Stop()
+	time.Sleep(2 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
 		panic(err)
 	}
-}
-
-func printHello() {
-	fmt.Printf("Build version: %s\n", ifNA(buildVersion))
-	fmt.Printf("Build date: %s\n", ifNA(buildDate))
-	fmt.Printf("Build commit: %s\n", ifNA(buildCommit))
-}
-
-func ifNA(s string) string {
-	if s == "" {
-		return "N/A"
-	}
-	return s
 }

@@ -9,6 +9,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/Nikolay961996/metsys/utils"
 	"github.com/golang-migrate/migrate"
 	"github.com/golang-migrate/migrate/database/postgres"
 	_ "github.com/golang-migrate/migrate/source/file"
@@ -42,7 +43,7 @@ func NewDBStorage(databaseDSN string) *DBStorage {
 
 func (m *DBStorage) SetGauge(metricName string, value float64) {
 	ctx := context.Background()
-	err := models.RetryerCon(func() error {
+	err := utils.RetryerCon(func() error {
 		_, err := m.sqlInsertOrUpdateGauge.ExecContext(ctx, metricName, value)
 		return err
 	}, shouldRetryDBError)
@@ -54,7 +55,7 @@ func (m *DBStorage) SetGauge(metricName string, value float64) {
 func (m *DBStorage) GetGauge(metricName string) (float64, error) {
 	ctx := context.Background()
 	var value float64
-	err := models.RetryerCon(func() error {
+	err := utils.RetryerCon(func() error {
 		return m.sqlGetGauge.QueryRowContext(ctx, metricName).Scan(&value)
 	}, shouldRetryDBError)
 	return value, err
@@ -62,7 +63,7 @@ func (m *DBStorage) GetGauge(metricName string) (float64, error) {
 
 func (m *DBStorage) AddCounter(metricName string, value int64) {
 	ctx := context.Background()
-	err := models.RetryerCon(func() error {
+	err := utils.RetryerCon(func() error {
 		_, err := m.sqlInsertOrUpdateCounter.ExecContext(ctx, metricName, value)
 		return err
 	}, shouldRetryDBError)
@@ -74,7 +75,7 @@ func (m *DBStorage) AddCounter(metricName string, value int64) {
 func (m *DBStorage) GetCounter(metricName string) (int64, error) {
 	ctx := context.Background()
 	var delta int64
-	err := models.RetryerCon(func() error {
+	err := utils.RetryerCon(func() error {
 		return m.sqlGetCounter.QueryRowContext(ctx, metricName).Scan(&delta)
 	}, shouldRetryDBError)
 	return delta, err
@@ -85,7 +86,7 @@ func (m *DBStorage) GetAll() []repositories.MetricDto {
 	ctx := context.Background()
 	var rows *sql.Rows
 
-	err := models.RetryerCon(func() error {
+	err := utils.RetryerCon(func() error {
 		rs, err := m.sqlGetAll.QueryContext(ctx)
 		if err != nil && rs.Err() != nil {
 			rows = rs
@@ -176,14 +177,14 @@ func (m *DBStorage) migrate() {
 		return nil
 	}
 
-	err := models.RetryerCon(migrateFunc, shouldRetryDBError)
+	err := utils.RetryerCon(migrateFunc, shouldRetryDBError)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func (m *DBStorage) open(databaseDSN string) {
-	err := models.RetryerCon(
+	err := utils.RetryerCon(
 		func() error {
 			db, err := sql.Open("pgx", databaseDSN)
 			if err == nil {
