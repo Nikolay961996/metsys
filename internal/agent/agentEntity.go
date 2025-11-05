@@ -37,6 +37,8 @@ func (a *Entity) Run(config *Config) {
 		panic(errors.New("parse RSA public key failed"))
 	}
 
+	realIP := "127.0.0.1" // agent's IP address. TODO: get real IP
+
 	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
 	a.jobsChan = jobsChan
 
@@ -47,7 +49,7 @@ func (a *Entity) Run(config *Config) {
 		a.wg.Add(1)
 		go func(id int) {
 			defer a.wg.Done()
-			runReportWorker(id, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey)
+			runReportWorker(id, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey, realIP)
 		}(i)
 	}
 

@@ -25,7 +25,8 @@ type Config struct {
 	ConfigFile         string        // json config
 	StoreIntervalStr   string        `json:"store_interval"` // interval for stor
 	StoreInterval      time.Duration // interval for stor
-	Restore            bool          `json:"restore"` // need restore
+	Restore            bool          `json:"restore"`        // need restore
+	TrustedSubnet      string        `json:"trusted_subnet"` // trusted subnet in CIDR format
 }
 
 func DefaultConfig() Config {
@@ -63,6 +64,7 @@ func (c *Config) flags() {
 	flag.StringVar(&c.KeyForSigning, "k", c.KeyForSigning, "key for signing")
 	flag.StringVar(&c.CryptoKey, "crypto-key", c.CryptoKey, "key for decryption")
 	flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "json config")
+	flag.StringVar(&c.TrustedSubnet, "t", c.TrustedSubnet, "trusted subnet in CIDR format")
 
 	flag.Parse()
 
@@ -84,7 +86,9 @@ func (c *Config) envs() {
 		CryptoKey       string `env:"CRYPTO_KEY"`
 		ConfigFile      string `env:"CONFIG"`
 		StoreInterval   int32  `env:"STORE_INTERVAL"`
+		TrustedSubnet   string `env:"TRUSTED_SUBNET"`
 	}
+
 	err := env.Parse(&configEnv)
 	if err != nil {
 		panic(err)
@@ -113,6 +117,9 @@ func (c *Config) envs() {
 	}
 	if configEnv.ConfigFile != "" {
 		c.ConfigFile = configEnv.ConfigFile
+	}
+	if configEnv.TrustedSubnet != "" {
+		c.TrustedSubnet = configEnv.TrustedSubnet
 	}
 }
 

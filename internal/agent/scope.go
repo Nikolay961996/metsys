@@ -33,10 +33,10 @@ func (e *HTTPStatusError) Error() string {
 }
 
 // Report to server
-func Report(metrics models.Metrics, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey) error {
+func Report(metrics models.Metrics, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey, realIP string) error {
 	client := resty.New()
 	url := fmt.Sprintf("%s/update/", serverAddress)
-	return sendToServer(client, url, &metrics, keyForSigning, publicKey)
+	return sendToServer(client, url, &metrics, keyForSigning, publicKey, realIP)
 }
 
 func createMetricsArray(metrics *Metrics) []models.Metrics {
@@ -130,7 +130,7 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 	return mr
 }
 
-func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics, keyForSigning string, publicKey *rsa.PublicKey) error {
+func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics, keyForSigning string, publicKey *rsa.PublicKey, realIP string) error {
 	models.Log.Info("Sending metrics to " + serverURL)
 	models.Log.Info("data: " + fmt.Sprintf("%v", metrics))
 
@@ -160,6 +160,7 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 	request := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
+		SetHeader("X-Real-IP", realIP).
 		SetBody(compressedBody)
 
 	if len(sign) > 0 {

@@ -39,7 +39,7 @@ func TestPositiveServer(t *testing.T) {
 	}
 	s := storage.NewFileStorage("tst", 5*time.Second, false)
 
-	ts := httptest.NewServer(router.MetricsRouterWithServer(s, "", nil))
+	ts := httptest.NewServer(router.MetricsRouterWithServer(s, "", nil, ""))
 	defer ts.Close()
 
 	for _, tt := range tests {

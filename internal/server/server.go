@@ -34,13 +34,13 @@ func InitServer(c *Config) MetricServer {
 	return a
 }
 
-func (s *MetricServer) Run(runOnServerAddress string, keyForSigning string, cryptoKey string) {
+func (s *MetricServer) Run(runOnServerAddress string, keyForSigning string, cryptoKey string, trustedSubnet string) {
 	privateKey, err := crypto.ParseRSAPrivateKeyPEM(cryptoKey)
 	if err != nil {
 		panic(fmt.Errorf("error parsing private key: %v", err))
 	}
 
-	handler := router.MetricsRouterWithServer(s.Storage, keyForSigning, privateKey)
+	handler := router.MetricsRouterWithServer(s.Storage, keyForSigning, privateKey, trustedSubnet)
 	s.srv = &http.Server{
 		Addr:    runOnServerAddress,
 		Handler: handler,

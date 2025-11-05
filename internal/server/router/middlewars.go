@@ -4,6 +4,7 @@ package router
 import (
 	"compress/gzip"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -119,5 +120,37 @@ func WithCompressionResponse(h http.Handler) http.HandlerFunc {
 			w = &compressedWriter{w, gz}
 		}
 		h.ServeHTTP(w, r)
+	}
+}
+
+func WithTrustedSubnetValidation(trustedSubnet string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if trustedSubnet == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			xRealIP := r.Header.Get("X-Real-IP")
+			if xRealIP == "" {
+				http.Error(w, "X-Real-IP header is missing", http.StatusForbidden)
+				return
+			}
+
+			ip := net.ParseIP(xRealIP)
+			_, subnet, err := net.ParseCIDR(trustedSubnet)
+			if err != nil {
+				models.Log.Error("Invalid trusted subnet configuration")
+				http.Error(w, "Server configuration error", http.StatusInternalServerError)
+				return
+			}
+
+			if !subnet.Contains(ip) {
+				http.Error(w, "Forbidden: IP not in trusted subnet", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
 	}
 }
