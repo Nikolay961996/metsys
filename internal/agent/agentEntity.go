@@ -4,6 +4,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"net"
 	"sync"
 	"time"
 
@@ -37,8 +38,7 @@ func (a *Entity) Run(config *Config) {
 		panic(errors.New("parse RSA public key failed"))
 	}
 
-	realIP := "127.0.0.1" // agent's IP address. TODO: get real IP
-
+	realIP := getRealIP()
 	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
 	a.jobsChan = jobsChan
 
@@ -103,4 +103,41 @@ func listenMetricsAndFadeOut(doneCtx context.Context, period time.Duration, metr
 			return
 		}
 	}
+}
+
+func getRealIP() string {
+	realIP := "127.0.0.1" // Default
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		models.Log.Error("Failed to get network interfaces: " + err.Error())
+	} else {
+		for _, iface := range ifaces {
+			if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+				continue
+			}
+
+			addrs, err := iface.Addrs()
+			if err != nil {
+				models.Log.Error("Failed to get addresses for interface: " + iface.Name)
+				continue
+			}
+
+			for _, addr := range addrs {
+				switch v := addr.(type) {
+				case *net.IPNet:
+					if v.IP.To4() != nil {
+						realIP = v.IP.String()
+						break
+					}
+				case *net.IPAddr:
+					if v.IP.To4() != nil {
+						realIP = v.IP.String()
+						break
+					}
+				}
+			}
+		}
+	}
+
+	return realIP
 }
