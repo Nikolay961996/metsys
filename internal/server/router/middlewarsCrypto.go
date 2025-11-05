@@ -21,7 +21,7 @@ func WithDecrypt(privateKey *rsa.PrivateKey) func(h http.Handler) http.Handler {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				models.Log.Error("error read request body", zap.Error(err))
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}
 			defer r.Body.Close()
@@ -29,7 +29,7 @@ func WithDecrypt(privateKey *rsa.PrivateKey) func(h http.Handler) http.Handler {
 			decrypted, err := crypto.DecryptMessageWithPrivateKey(body, privateKey)
 			if err != nil {
 				models.Log.Error("error decrypt message", zap.Error(err))
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}
 			r.Body = io.NopCloser(bytes.NewReader(decrypted))
