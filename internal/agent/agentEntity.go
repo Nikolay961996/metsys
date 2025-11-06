@@ -72,10 +72,7 @@ func (a *Entity) Run(config *Config) {
 
 // RunGRPC runs gRPC client for communication with the server
 func (a *Entity) RunGRPC(config *Config) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	clientConn, err := grpc.DialContext(ctx, config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.NewClient(config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(errors.New("failed to connect to gRPC server: " + err.Error()))
 	}

@@ -80,6 +80,7 @@ func (c *Config) flags() {
 
 func (c *Config) envs() {
 	var configEnv struct {
+		Restore         *bool  `env:"RESTORE"`
 		FileStoragePath string `env:"FILE_STORAGE_PATH"`
 		DatabaseDSN     string `env:"DATABASE_DSN"`
 		Address         string `env:"ADDRESS"`
@@ -88,7 +89,6 @@ func (c *Config) envs() {
 		ConfigFile      string `env:"CONFIG"`
 		TrustedSubnet   string `env:"TRUSTED_SUBNET"`
 		GRPCPort        string `env:"GRPC_PORT"`
-		Restore         *bool  `env:"RESTORE"`
 		StoreInterval   int32  `env:"STORE_INTERVAL"`
 	}
 
