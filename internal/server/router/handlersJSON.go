@@ -38,7 +38,7 @@ func baseJSONHandler(w http.ResponseWriter, r *http.Request, storage repositorie
 		}
 	}
 
-	actualMr, err := getActualMetrics(storage, mr)
+	actualMr, err := GetActualMetrics(storage, mr)
 	if err != nil {
 		models.Log.Error(err.Error())
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -96,7 +96,7 @@ func updatesMetricJSONHandler(storage repositories.Storage) http.HandlerFunc {
 	}
 }
 
-func getActualMetrics(storage repositories.Storage, mr *models.Metrics) (*models.Metrics, error) {
+func GetActualMetrics(storage repositories.Storage, mr *models.Metrics) (*models.Metrics, error) {
 	var actual = models.Metrics{
 		ID:    mr.ID,
 		MType: mr.MType,

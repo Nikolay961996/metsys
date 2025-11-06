@@ -10,6 +10,8 @@ import (
 
 	"github.com/Nikolay961996/metsys/internal/crypto"
 	"github.com/Nikolay961996/metsys/models"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Entity for agent
@@ -33,29 +35,58 @@ func InitAgent() *Entity {
 
 // Run agent
 func (a *Entity) Run(config *Config) {
-	publicKey, err := crypto.ParseRSAPublicKeyPEM(config.CryptoKey)
+	if config.GRPCServerAddress == "" && config.SendToServerAddress == "" {
+		panic("No server address specified for either HTTP or gRPC communication")
+	}
+
+	if config.GRPCServerAddress != "" {
+		go a.RunGRPC(config)
+	}
+
+	if config.SendToServerAddress != "" {
+		publicKey, err := crypto.ParseRSAPublicKeyPEM(config.CryptoKey)
+		if err != nil {
+			panic(errors.New("parse RSA public key failed"))
+		}
+
+		realIP := getRealIP()
+		jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
+		a.jobsChan = jobsChan
+
+		newMetricsChan := runPollWorker(config.PollInterval, a.doneCtx)
+		newGopsutilMetricsChan := runPollGopsutilWorker(config.PollInterval, a.doneCtx)
+
+		for i := 0; i < config.SendMetricsRateLimit; i++ {
+			a.wg.Add(1)
+			go func(id int) {
+				defer a.wg.Done()
+				runReportWorker(id, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey, realIP)
+			}(i)
+		}
+
+		listenMetricsAndFadeOut(a.doneCtx, config.ReportInterval, newMetricsChan, newGopsutilMetricsChan, jobsChan)
+
+		a.wg.Wait()
+	}
+}
+
+// RunGRPC runs gRPC client for communication with the server
+func (a *Entity) RunGRPC(config *Config) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	clientConn, err := grpc.DialContext(ctx, config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		panic(errors.New("parse RSA public key failed"))
+		panic(errors.New("failed to connect to gRPC server: " + err.Error()))
 	}
+	defer clientConn.Close()
 
-	realIP := getRealIP()
-	jobsChan := make(chan workerJob, config.SendMetricsRateLimit)
-	a.jobsChan = jobsChan
+	// Example: Initialize gRPC client and perform operations
+	// client := pb.NewYourServiceClient(clientConn)
+	// Call gRPC methods using the client
 
-	newMetricsChan := runPollWorker(config.PollInterval, a.doneCtx)
-	newGopsutilMetricsChan := runPollGopsutilWorker(config.PollInterval, a.doneCtx)
-
-	for i := 0; i < config.SendMetricsRateLimit; i++ {
-		a.wg.Add(1)
-		go func(id int) {
-			defer a.wg.Done()
-			runReportWorker(id, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey, realIP)
-		}(i)
-	}
-
-	listenMetricsAndFadeOut(a.doneCtx, config.ReportInterval, newMetricsChan, newGopsutilMetricsChan, jobsChan)
-
-	a.wg.Wait()
+	// Placeholder for gRPC communication logic
+	models.Log.Info("Connected to gRPC server at " + config.GRPCServerAddress)
 }
 
 // Stop agent

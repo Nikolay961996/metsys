@@ -18,6 +18,7 @@ import (
 
 type Config struct {
 	RunOnServerAddress string        `json:"address"`      // server address
+	GRPCPort           string        `json:"grpc_port"`    // gRPC server port
 	FileStoragePath    string        `json:"store_file"`   // file storage path
 	DatabaseDSN        string        `json:"database_dsn"` // database connection string
 	KeyForSigning      string        // key for sign
@@ -65,6 +66,7 @@ func (c *Config) flags() {
 	flag.StringVar(&c.CryptoKey, "crypto-key", c.CryptoKey, "key for decryption")
 	flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "json config")
 	flag.StringVar(&c.TrustedSubnet, "t", c.TrustedSubnet, "trusted subnet in CIDR format")
+	flag.StringVar(&c.GRPCPort, "grpc-port", c.GRPCPort, "gRPC server port")
 
 	flag.Parse()
 
@@ -78,7 +80,6 @@ func (c *Config) flags() {
 
 func (c *Config) envs() {
 	var configEnv struct {
-		Restore         *bool  `env:"RESTORE"`
 		FileStoragePath string `env:"FILE_STORAGE_PATH"`
 		DatabaseDSN     string `env:"DATABASE_DSN"`
 		Address         string `env:"ADDRESS"`
@@ -86,6 +87,8 @@ func (c *Config) envs() {
 		CryptoKey       string `env:"CRYPTO_KEY"`
 		ConfigFile      string `env:"CONFIG"`
 		TrustedSubnet   string `env:"TRUSTED_SUBNET"`
+		GRPCPort        string `env:"GRPC_PORT"`
+		Restore         *bool  `env:"RESTORE"`
 		StoreInterval   int32  `env:"STORE_INTERVAL"`
 	}
 
@@ -120,6 +123,9 @@ func (c *Config) envs() {
 	}
 	if configEnv.TrustedSubnet != "" {
 		c.TrustedSubnet = configEnv.TrustedSubnet
+	}
+	if configEnv.GRPCPort != "" {
+		c.GRPCPort = configEnv.GRPCPort
 	}
 }
 
@@ -159,5 +165,8 @@ func (c *Config) jsonConfig() {
 	}
 	if c.Restore == defConfig.Restore {
 		c.Restore = parsed.Restore
+	}
+	if c.GRPCPort == "" {
+		c.GRPCPort = parsed.GRPCPort
 	}
 }

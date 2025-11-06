@@ -22,7 +22,7 @@ func main() {
 	c := server.DefaultConfig()
 	c.Parse()
 	entity := server.InitServer(&c)
-	entity.Run(c.RunOnServerAddress, c.KeyForSigning, c.CryptoKey, c.TrustedSubnet)
+	entity.Run(&c)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
