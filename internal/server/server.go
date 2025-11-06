@@ -21,7 +21,7 @@ import (
 type MetricServer struct {
 	Storage repositories.Storage
 	srv     *http.Server
-	grpcSrv *grpc.Server // Added gRPC server instance
+	grpcSrv *grpc.Server
 }
 
 func InitServer(c *Config) MetricServer {
