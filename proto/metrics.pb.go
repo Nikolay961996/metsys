@@ -14,8 +14,6 @@ import (
 	unsafe "unsafe"
 )
 
-//lint:file-ignore U1000 Ignore unused fields in auto-generated code
-
 const (
 	// Verify that this generated code is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(20 - protoimpl.MinVersion)

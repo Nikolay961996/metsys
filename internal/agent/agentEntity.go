@@ -10,16 +10,18 @@ import (
 
 	"github.com/Nikolay961996/metsys/internal/crypto"
 	"github.com/Nikolay961996/metsys/models"
+	"github.com/Nikolay961996/metsys/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Entity for agent
 type Entity struct {
-	doneCtx  context.Context    // for cancel
-	cancel   context.CancelFunc // for call cancel
-	jobsChan chan workerJob
-	wg       sync.WaitGroup
+	doneCtx    context.Context
+	cancel     context.CancelFunc
+	jobsChan   chan workerJob
+	GRPCClient *proto.MetricsServiceClient
+	wg         sync.WaitGroup
 }
 
 // InitAgent creating new agent entity
@@ -60,7 +62,7 @@ func (a *Entity) Run(config *Config) {
 			a.wg.Add(1)
 			go func(id int) {
 				defer a.wg.Done()
-				runReportWorker(id, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey, realIP)
+				runReportWorker(id, jobsChan, config.SendToServerAddress, config.KeyForSigning, publicKey, realIP, a.GRPCClient)
 			}(i)
 		}
 
@@ -70,7 +72,7 @@ func (a *Entity) Run(config *Config) {
 	}
 }
 
-// RunGRPC runs gRPC client for communication with the server
+// RunGRPC runs gRPC client
 func (a *Entity) RunGRPC(config *Config) {
 	clientConn, err := grpc.NewClient(config.GRPCServerAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -78,11 +80,9 @@ func (a *Entity) RunGRPC(config *Config) {
 	}
 	defer clientConn.Close()
 
-	// Example: Initialize gRPC client and perform operations
-	// client := pb.NewYourServiceClient(clientConn)
-	// Call gRPC methods using the client
+	client := proto.NewMetricsServiceClient(clientConn)
+	a.GRPCClient = &client
 
-	// Placeholder for gRPC communication logic
 	models.Log.Info("Connected to gRPC server at " + config.GRPCServerAddress)
 }
 

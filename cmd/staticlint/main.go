@@ -96,7 +96,6 @@ var osExitInMainAnalyzer = &analysis.Analyzer{
 	},
 }
 
-// isProjectFile проверяет, принадлежит ли файл текущему проекту
 func isProjectFile(pass *analysis.Pass, file *ast.File, workDir string) bool {
 	if !file.Pos().IsValid() {
 		return false
@@ -105,13 +104,11 @@ func isProjectFile(pass *analysis.Pass, file *ast.File, workDir string) bool {
 	fname := pass.Fset.File(file.Pos()).Name()
 	fname = filepath.Clean(fname)
 
-	// Проверяем, что файл находится в рабочей директории проекта
 	rel, err := filepath.Rel(workDir, fname)
 	if err != nil || strings.HasPrefix(rel, "..") {
 		return false
 	}
 
-	// Игнорируем файлы в папках vendor, node_modules и т.д.
 	if strings.Contains(fname, string(filepath.Separator)+"vendor"+string(filepath.Separator)) ||
 		strings.Contains(fname, string(filepath.Separator)+"node_modules"+string(filepath.Separator)) ||
 		strings.Contains(fname, string(filepath.Separator)+".git"+string(filepath.Separator)) {
@@ -121,9 +118,7 @@ func isProjectFile(pass *analysis.Pass, file *ast.File, workDir string) bool {
 	return true
 }
 
-// isGeneratedFile проверяет, является ли файл сгенерированным
 func isGeneratedFile(pass *analysis.Pass, file *ast.File) bool {
-	// Проверяем по имени файла
 	if file.Pos().IsValid() {
 		fname := pass.Fset.File(file.Pos()).Name()
 		if strings.HasSuffix(fname, ".pb.go") {
@@ -131,7 +126,6 @@ func isGeneratedFile(pass *analysis.Pass, file *ast.File) bool {
 		}
 	}
 
-	// Проверяем по комментариям в файле
 	if file.Doc != nil {
 		for _, comment := range file.Doc.List {
 			if strings.Contains(comment.Text, "Code generated") ||
@@ -144,7 +138,6 @@ func isGeneratedFile(pass *analysis.Pass, file *ast.File) bool {
 	return false
 }
 
-// wrapAnalyzer оборачивает анализатор для фильтрации сгенерированных файлов
 func wrapAnalyzer(analyzer *analysis.Analyzer) *analysis.Analyzer {
 	if analyzer.Run == nil {
 		return analyzer
@@ -153,14 +146,12 @@ func wrapAnalyzer(analyzer *analysis.Analyzer) *analysis.Analyzer {
 	originalRun := analyzer.Run
 	wrappedAnalyzer := *analyzer
 	wrappedAnalyzer.Run = func(pass *analysis.Pass) (interface{}, error) {
-		// Получаем рабочую директорию
 		workDir, err := os.Getwd()
 		if err != nil {
 			workDir = ""
 		}
 		workDir = filepath.Clean(workDir)
 
-		// Фильтруем файлы: только файлы проекта и не сгенерированные
 		filteredFiles := make([]*ast.File, 0, len(pass.Files))
 		for _, file := range pass.Files {
 			if isProjectFile(pass, file, workDir) && !isGeneratedFile(pass, file) {
@@ -169,11 +160,9 @@ func wrapAnalyzer(analyzer *analysis.Analyzer) *analysis.Analyzer {
 		}
 
 		if len(filteredFiles) == 0 {
-			// Нет файлов для анализа в этом пакете
 			return nil, nil
 		}
 
-		// Создаем копию pass с отфильтрованными файлами
 		filteredPass := &analysis.Pass{
 			Analyzer:          pass.Analyzer,
 			Fset:              pass.Fset,
@@ -201,7 +190,6 @@ func main() {
 	var analyzers []*analysis.Analyzer
 
 	// Standard analyzers
-	
 	standardAnalyzers := []*analysis.Analyzer{
 		
 		assign.Analyzer,

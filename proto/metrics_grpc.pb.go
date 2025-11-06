@@ -205,5 +205,3 @@ var MetricsService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "metrics.proto",
 }
-
-//lint:file-ignore U1000 Ignore unused fields in auto-generated code

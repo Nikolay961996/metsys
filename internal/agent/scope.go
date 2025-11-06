@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/hmac"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -10,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Nikolay961996/metsys/proto"
 	"io"
 	"net"
 	"net/http"
@@ -33,7 +35,20 @@ func (e *HTTPStatusError) Error() string {
 }
 
 // Report to server
-func Report(metrics models.Metrics, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey, realIP string) error {
+func Report(metrics models.Metrics, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey, realIP string, GRPCClient *proto.MetricsServiceClient) error {
+	if GRPCClient != nil {
+		_, err := (*GRPCClient).UpdateMetric(context.Background(), &proto.MetricUpdateRequest{
+			Id:    metrics.ID,
+			Type:  metrics.MType,
+			Value: *metrics.Value,
+			Delta: *metrics.Delta,
+		})
+
+		if err != nil {
+			models.Log.Error(fmt.Sprintf("error grpc: %s", err.Error()))
+		}
+	}
+
 	client := resty.New()
 	url := fmt.Sprintf("%s/update/", serverAddress)
 	return sendToServer(client, url, &metrics, keyForSigning, publicKey, realIP)

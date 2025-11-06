@@ -14,8 +14,8 @@ import (
 	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
 	"github.com/Nikolay961996/metsys/models"
-	"google.golang.org/grpc"
 	"github.com/Nikolay961996/metsys/proto"
+	"google.golang.org/grpc"
 )
 
 type MetricServer struct {
@@ -70,10 +70,7 @@ func (s *MetricServer) RunGRPC(grpcPort string) {
 	}
 
 	s.grpcSrv = grpc.NewServer()
-	// Register gRPC services here
-	// Example: pb.RegisterYourServiceServer(s.grpcSrv, &YourService{})
 
-	// Register the MetricsServiceServer
 	proto.RegisterMetricsServiceServer(s.grpcSrv, &MetricsServiceServer{Storage: s.Storage})
 
 	go func() {
