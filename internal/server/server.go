@@ -44,7 +44,7 @@ func (s *MetricServer) Run(c *Config) {
 	}
 
 	if c.GRPCPort != "" {
-		s.RunGRPC(c.GRPCPort)
+		s.RunGRPC(c.GRPCPort, c.TrustedSubnet)
 	}
 
 	if c.RunOnServerAddress != "" {
@@ -63,13 +63,15 @@ func (s *MetricServer) Run(c *Config) {
 	}
 }
 
-func (s *MetricServer) RunGRPC(grpcPort string) {
+func (s *MetricServer) RunGRPC(grpcPort string, trustedSubnet string) {
 	listener, err := net.Listen("tcp", grpcPort)
 	if err != nil {
 		panic(fmt.Errorf("failed to listen on gRPC port %s: %v", grpcPort, err))
 	}
 
-	s.grpcSrv = grpc.NewServer()
+	s.grpcSrv = grpc.NewServer(
+		grpc.UnaryInterceptor(router.WithTrustedSubnetInterceptor(trustedSubnet)),
+	)
 
 	proto.RegisterMetricsServiceServer(s.grpcSrv, &MetricsServiceServer{Storage: s.Storage})
 

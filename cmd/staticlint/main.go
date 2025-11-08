@@ -40,7 +40,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/ifaceassert"
 	"golang.org/x/tools/go/analysis/passes/loopclosure"
 	"golang.org/x/tools/go/analysis/passes/nilfunc"
-	//"golang.org/x/tools/go/analysis/passes/printf"
 	"golang.org/x/tools/go/analysis/passes/shadow"
 	"golang.org/x/tools/go/analysis/passes/sigchanyzer"
 	"golang.org/x/tools/go/analysis/passes/stringintconv"
@@ -191,7 +190,7 @@ func main() {
 
 	// Standard analyzers
 	standardAnalyzers := []*analysis.Analyzer{
-		
+
 		assign.Analyzer,
 		atomic.Analyzer,
 		bools.Analyzer,
@@ -204,7 +203,6 @@ func main() {
 		ifaceassert.Analyzer,
 		loopclosure.Analyzer,
 		nilfunc.Analyzer,
-		//printf.Analyzer, so noisy analyzer
 		shadow.Analyzer,
 		sigchanyzer.Analyzer,
 		stringintconv.Analyzer,

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Nikolay961996/metsys/proto"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"net"
 	"net/http"
@@ -37,7 +38,11 @@ func (e *HTTPStatusError) Error() string {
 // Report to server
 func Report(metrics models.Metrics, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey, realIP string, GRPCClient *proto.MetricsServiceClient) error {
 	if GRPCClient != nil {
-		_, err := (*GRPCClient).UpdateMetric(context.Background(), &proto.MetricUpdateRequest{
+		md := metadata.New(map[string]string{
+			"X-Real-IP": realIP,
+		})
+
+		_, err := (*GRPCClient).UpdateMetric(metadata.NewOutgoingContext(context.Background(), md), &proto.MetricUpdateRequest{
 			Id:    metrics.ID,
 			Type:  metrics.MType,
 			Value: *metrics.Value,
