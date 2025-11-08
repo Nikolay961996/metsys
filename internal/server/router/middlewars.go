@@ -159,7 +159,7 @@ func WithTrustedSubnetValidation(trustedSubnet string) func(http.Handler) http.H
 			case codes.PermissionDenied:
 				http.Error(w, "Forbidden: IP not in trusted subnet", http.StatusForbidden)
 			case codes.Internal:
-				http.Error(w, "Server configuration error", http.StatusInternalServerError)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			case codes.OK:
 				next.ServeHTTP(w, r)
 			default:
