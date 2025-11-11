@@ -14,17 +14,19 @@ import (
 func MetricsRouterTest() *chi.Mux {
 	s := storage.NewFileStorage("/local.db", 5*time.Second, false)
 
-	return MetricsRouterWithServer(s, "", nil)
+	return MetricsRouterWithServer(s, "", nil, "")
 }
 
-func MetricsRouterWithServer(s repositories.Storage, keyForSigning string, privateKey *rsa.PrivateKey) *chi.Mux {
+func MetricsRouterWithServer(s repositories.Storage, keyForSigning string, privateKey *rsa.PrivateKey, trustedSubnet string) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(
 		WithDecompressionRequest,
 		WithLogger,
 		WithDecrypt(privateKey),
 		WithSigningCheck(keyForSigning),
-		WithSigningResponse(keyForSigning))
+		WithSigningResponse(keyForSigning),
+		WithTrustedSubnetValidation(trustedSubnet),
+	)
 
 	r.Get("/", WithCompressionResponse(getDashboardHandler(s)))
 	r.Get("/ping", pingDatabase(s))

@@ -70,7 +70,7 @@ func TestSendRequest(t *testing.T) {
 	defer ts.Close()
 	arr := createMetricsArray(&metrics)
 	for _, m := range arr {
-		err := Report(m, ts.URL, "", nil)
+		err := Report(m, ts.URL, "", nil, "", nil)
 		assert.NoError(t, err)
 	}
 }

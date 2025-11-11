@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package metrics;
+
+option go_package = "github.com/Nikolay961996/metsys/proto";
+
+// The Metrics service definition.
+service MetricsService {
+  // Get the value of a metric
+  rpc GetMetric (MetricRequest) returns (MetricResponse);
+
+  // Update a metric
+  rpc UpdateMetric (MetricUpdateRequest) returns (MetricResponse);
+
+  // Batch update metrics
+  rpc BatchUpdateMetrics (BatchMetricUpdateRequest) returns (BatchMetricUpdateResponse);
+}
+
+// Request message for getting a metric
+message MetricRequest {
+  string id = 1;
+  string type = 2; // counter or gauge
+}
+
+// Response message for a metric
+message MetricResponse {
+  string id = 1;
+  string type = 2;
+  double value = 3;
+  int64 delta = 4;
+}
+
+// Request message for updating a metric
+message MetricUpdateRequest {
+  string id = 1;
+  string type = 2;
+  double value = 3;
+  int64 delta = 4;
+}
+
+// Request message for batch updating metrics
+message BatchMetricUpdateRequest {
+  repeated MetricUpdateRequest metrics = 1;
+}
+
+// Response message for batch updating metrics
+message BatchMetricUpdateResponse {
+  repeated MetricResponse metrics = 1;
+}

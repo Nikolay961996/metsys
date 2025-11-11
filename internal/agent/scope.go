@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/hmac"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -10,6 +11,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Nikolay961996/metsys/proto"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"net"
 	"net/http"
@@ -33,10 +36,27 @@ func (e *HTTPStatusError) Error() string {
 }
 
 // Report to server
-func Report(metrics models.Metrics, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey) error {
+func Report(metrics models.Metrics, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey, realIP string, GRPCClient *proto.MetricsServiceClient) error {
+	if GRPCClient != nil {
+		md := metadata.New(map[string]string{
+			"X-Real-IP": realIP,
+		})
+
+		_, err := (*GRPCClient).UpdateMetric(metadata.NewOutgoingContext(context.Background(), md), &proto.MetricUpdateRequest{
+			Id:    metrics.ID,
+			Type:  metrics.MType,
+			Value: *metrics.Value,
+			Delta: *metrics.Delta,
+		})
+
+		if err != nil {
+			models.Log.Error(fmt.Sprintf("error grpc: %s", err.Error()))
+		}
+	}
+
 	client := resty.New()
 	url := fmt.Sprintf("%s/update/", serverAddress)
-	return sendToServer(client, url, &metrics, keyForSigning, publicKey)
+	return sendToServer(client, url, &metrics, keyForSigning, publicKey, realIP)
 }
 
 func createMetricsArray(metrics *Metrics) []models.Metrics {
@@ -130,7 +150,7 @@ func createMetrics(metricType string, metricName string, metricValue any) models
 	return mr
 }
 
-func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics, keyForSigning string, publicKey *rsa.PublicKey) error {
+func sendToServer(client *resty.Client, serverURL string, metrics *models.Metrics, keyForSigning string, publicKey *rsa.PublicKey, realIP string) error {
 	models.Log.Info("Sending metrics to " + serverURL)
 	models.Log.Info("data: " + fmt.Sprintf("%v", metrics))
 
@@ -160,6 +180,7 @@ func sendToServer(client *resty.Client, serverURL string, metrics *models.Metric
 	request := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
+		SetHeader("X-Real-IP", realIP).
 		SetBody(compressedBody)
 
 	if len(sign) > 0 {

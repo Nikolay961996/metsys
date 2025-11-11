@@ -18,12 +18,14 @@ import (
 
 type Config struct {
 	RunOnServerAddress string        `json:"address"`      // server address
+	GRPCPort           string        `json:"grpc_port"`    // gRPC server port
 	FileStoragePath    string        `json:"store_file"`   // file storage path
 	DatabaseDSN        string        `json:"database_dsn"` // database connection string
 	KeyForSigning      string        // key for sign
 	CryptoKey          string        `json:"crypto_key"` // key for decrypt (private key of server)
 	ConfigFile         string        // json config
 	StoreIntervalStr   string        `json:"store_interval"` // interval for stor
+	TrustedSubnet      string        `json:"trusted_subnet"` // trusted subnet in CIDR format
 	StoreInterval      time.Duration // interval for stor
 	Restore            bool          `json:"restore"` // need restore
 }
@@ -63,6 +65,8 @@ func (c *Config) flags() {
 	flag.StringVar(&c.KeyForSigning, "k", c.KeyForSigning, "key for signing")
 	flag.StringVar(&c.CryptoKey, "crypto-key", c.CryptoKey, "key for decryption")
 	flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "json config")
+	flag.StringVar(&c.TrustedSubnet, "t", c.TrustedSubnet, "trusted subnet in CIDR format")
+	flag.StringVar(&c.GRPCPort, "grpc-port", c.GRPCPort, "gRPC server port")
 
 	flag.Parse()
 
@@ -83,8 +87,11 @@ func (c *Config) envs() {
 		KeyForSigning   string `env:"KEY"`
 		CryptoKey       string `env:"CRYPTO_KEY"`
 		ConfigFile      string `env:"CONFIG"`
+		TrustedSubnet   string `env:"TRUSTED_SUBNET"`
+		GRPCPort        string `env:"GRPC_PORT"`
 		StoreInterval   int32  `env:"STORE_INTERVAL"`
 	}
+
 	err := env.Parse(&configEnv)
 	if err != nil {
 		panic(err)
@@ -113,6 +120,12 @@ func (c *Config) envs() {
 	}
 	if configEnv.ConfigFile != "" {
 		c.ConfigFile = configEnv.ConfigFile
+	}
+	if configEnv.TrustedSubnet != "" {
+		c.TrustedSubnet = configEnv.TrustedSubnet
+	}
+	if configEnv.GRPCPort != "" {
+		c.GRPCPort = configEnv.GRPCPort
 	}
 }
 
@@ -152,5 +165,8 @@ func (c *Config) jsonConfig() {
 	}
 	if c.Restore == defConfig.Restore {
 		c.Restore = parsed.Restore
+	}
+	if c.GRPCPort == "" {
+		c.GRPCPort = parsed.GRPCPort
 	}
 }

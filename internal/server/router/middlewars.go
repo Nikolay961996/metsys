@@ -3,7 +3,10 @@ package router
 
 import (
 	"compress/gzip"
+	"fmt"
+	"google.golang.org/grpc/codes"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -119,5 +122,50 @@ func WithCompressionResponse(h http.Handler) http.HandlerFunc {
 			w = &compressedWriter{w, gz}
 		}
 		h.ServeHTTP(w, r)
+	}
+}
+
+func checkTrustedSubnet(xRealIP string, trustedSubnet string) codes.Code {
+	if trustedSubnet == "" {
+		return codes.OK
+	}
+
+	if xRealIP == "" {
+		models.Log.Error("X-Real-IP header is missing")
+		return codes.PermissionDenied // Forbidden
+	}
+
+	ip := net.ParseIP(xRealIP)
+	_, subnet, err := net.ParseCIDR(trustedSubnet)
+	if err != nil {
+		models.Log.Error("Invalid trusted subnet configuration")
+		return codes.Internal
+	}
+
+	if !subnet.Contains(ip) {
+		return codes.PermissionDenied
+	}
+
+	return codes.OK
+}
+
+func WithTrustedSubnetValidation(trustedSubnet string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			xRealIP := r.Header.Get("X-Real-IP")
+			code := checkTrustedSubnet(xRealIP, trustedSubnet)
+
+			switch code {
+			case codes.PermissionDenied:
+				http.Error(w, "Forbidden: IP not in trusted subnet", http.StatusForbidden)
+			case codes.Internal:
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			case codes.OK:
+				next.ServeHTTP(w, r)
+			default:
+				models.Log.Warn(fmt.Sprintf("Not expectes code: %d", code))
+				next.ServeHTTP(w, r)
+			}
+		})
 	}
 }

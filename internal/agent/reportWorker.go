@@ -3,6 +3,7 @@ package agent
 import (
 	"crypto/rsa"
 	"fmt"
+	"github.com/Nikolay961996/metsys/proto"
 
 	"github.com/Nikolay961996/metsys/models"
 )
@@ -11,10 +12,10 @@ type workerJob struct {
 	oneMetrics models.Metrics
 }
 
-func runReportWorker(id int, jobsIn <-chan workerJob, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey) {
+func runReportWorker(id int, jobsIn <-chan workerJob, serverAddress string, keyForSigning string, publicKey *rsa.PublicKey, realIP string, GRPCClient *proto.MetricsServiceClient) {
 	models.Log.Info(fmt.Sprintf("Worker %d started", id))
 	for job := range jobsIn {
-		err := Report(job.oneMetrics, serverAddress, keyForSigning, publicKey)
+		err := Report(job.oneMetrics, serverAddress, keyForSigning, publicKey, realIP, GRPCClient)
 		if err != nil {
 			models.Log.Error(fmt.Sprintf("%d on worker: %s", id, err.Error()))
 		}

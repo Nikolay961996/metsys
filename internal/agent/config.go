@@ -19,9 +19,10 @@ import (
 // Config for agent
 type Config struct {
 	SendToServerAddress  string        `json:"address"` // server address for reporting
-	KeyForSigning        string        // private key for signing
+	GRPCServerAddress    string        `json:"grpc_address"` // gRPC server address for reporting
 	CryptoKey            string        `json:"crypto_key"` // key for encrypt (public key of server)
 	ConfigFile           string        // json config
+	KeyForSigning        string        // private key for signing
 	ReportIntervalStr    string        `json:"report_interval"`
 	PollIntervalStr      string        `json:"poll_interval"`
 	PollInterval         time.Duration // poll time period
@@ -32,7 +33,6 @@ type Config struct {
 // DefaultConfig default config
 func DefaultConfig() Config {
 	return Config{
-		SendToServerAddress:  "http://localhost:8080", // server address. Like http://localhost:8080
 		PollInterval:         2 * time.Second,         // updating device data interval
 		ReportInterval:       10 * time.Second,        // report to server interval
 		KeyForSigning:        "",                      // private key for singing
@@ -62,6 +62,7 @@ func (c *Config) flags() {
 	flag.IntVar(&c.SendMetricsRateLimit, "l", 1, "rate limit to sending server")
 	flag.StringVar(&c.CryptoKey, "crypto-key", "", "key for encryption")
 	flag.StringVar(&c.ConfigFile, "c", c.ConfigFile, "json config")
+	flag.StringVar(&c.GRPCServerAddress, "grpc-address", "", "gRPC server address")
 
 	flag.Parse()
 
@@ -81,6 +82,7 @@ func (c *Config) envs() {
 		KeyForSigning  string `env:"KEY"`
 		CryptoKey      string `env:"CRYPTO_KEY"`
 		ConfigFile     string `env:"CONFIG"`
+		GRPCServerAddress string `env:"GRPC_ADDRESS"`
 		ReportInterval int    `env:"REPORT_INTERVAL"`
 		PollInterval   int    `env:"POLL_INTERVAL"`
 		SendRateLimit  int    `env:"RATE_LIMIT"`
@@ -155,5 +157,8 @@ func (c *Config) jsonConfig() {
 	}
 	if c.PollInterval == defConfig.PollInterval && parsed.PollIntervalStr != "" {
 		utils.TryParseDuration(&c.PollInterval, parsed.PollIntervalStr)
+	}
+	if c.GRPCServerAddress == "" {
+		c.GRPCServerAddress = parsed.GRPCServerAddress
 	}
 }

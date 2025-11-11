@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -13,11 +14,14 @@ import (
 	"github.com/Nikolay961996/metsys/internal/server/router"
 	"github.com/Nikolay961996/metsys/internal/server/storage"
 	"github.com/Nikolay961996/metsys/models"
+	"github.com/Nikolay961996/metsys/proto"
+	"google.golang.org/grpc"
 )
 
 type MetricServer struct {
 	Storage repositories.Storage
 	srv     *http.Server
+	grpcSrv *grpc.Server
 }
 
 func InitServer(c *Config) MetricServer {
@@ -34,19 +38,48 @@ func InitServer(c *Config) MetricServer {
 	return a
 }
 
-func (s *MetricServer) Run(runOnServerAddress string, keyForSigning string, cryptoKey string) {
-	privateKey, err := crypto.ParseRSAPrivateKeyPEM(cryptoKey)
+func (s *MetricServer) Run(c *Config) {
+	if c.GRPCPort == "" && c.RunOnServerAddress == "" {
+		panic("No port specified for either HTTP or gRPC server")
+	}
+
+	if c.GRPCPort != "" {
+		s.RunGRPC(c.GRPCPort, c.TrustedSubnet)
+	}
+
+	if c.RunOnServerAddress != "" {
+		privateKey, err := crypto.ParseRSAPrivateKeyPEM(c.CryptoKey)
+		if err != nil {
+			panic(fmt.Errorf("error parsing private key: %v", err))
+		}
+
+		handler := router.MetricsRouterWithServer(s.Storage, c.KeyForSigning, privateKey, c.TrustedSubnet)
+		s.srv = &http.Server{
+			Addr:    c.RunOnServerAddress,
+			Handler: handler,
+		}
+
+		runBackground(s)
+	}
+}
+
+func (s *MetricServer) RunGRPC(grpcPort string, trustedSubnet string) {
+	listener, err := net.Listen("tcp", grpcPort)
 	if err != nil {
-		panic(fmt.Errorf("error parsing private key: %v", err))
+		panic(fmt.Errorf("failed to listen on gRPC port %s: %v", grpcPort, err))
 	}
 
-	handler := router.MetricsRouterWithServer(s.Storage, keyForSigning, privateKey)
-	s.srv = &http.Server{
-		Addr:    runOnServerAddress,
-		Handler: handler,
-	}
+	s.grpcSrv = grpc.NewServer(
+		grpc.UnaryInterceptor(router.WithTrustedSubnetInterceptor(trustedSubnet)),
+	)
 
-	runBackground(s)
+	proto.RegisterMetricsServiceServer(s.grpcSrv, &MetricsServiceServer{Storage: s.Storage})
+
+	go func() {
+		if err := s.grpcSrv.Serve(listener); err != nil {
+			panic(fmt.Errorf("failed to serve gRPC: %v", err))
+		}
+	}()
 }
 
 // Stop gracefully shuts down the HTTP server and closes storage
